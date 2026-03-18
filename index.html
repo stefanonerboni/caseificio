@@ -1,0 +1,2817 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2D5016">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Merlo Bianco">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%232D5016'/%3E%3Ctext y='130' x='96' text-anchor='middle' font-size='110' font-family='serif'%3E🧀%3C/text%3E%3C/svg%3E">
+<link rel="manifest" id="pwa-manifest">
+<title>Registro Caseificio – Merlo Bianco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --green:#2D5016;--green-l:#4A7C2F;--green-d:#1A3009;--green-xl:#E8F0E0;
+  --amber:#B8730A;--amber-l:#E8920D;--amber-xl:#FEF3C7;
+  --red:#C0392B;--orange:#E67E22;--blue:#1D4ED8;--teal:#0F766E;
+  --ok:#16A34A;--ok-l:#DCFCE7;--warn:#D97706;--warn-l:#FEF3C7;--err:#DC2626;--err-l:#FEE2E2;
+  --bg:#F7F3EC;--surface:#FFFFFF;--border:#D6C9B0;--border-l:#EDE4D6;
+  --txt:#1C1A16;--txt-2:#5C5244;--txt-3:#9C8E80;
+  --sh:0 2px 8px rgba(0,0,0,.09);--sh-l:0 4px 20px rgba(0,0,0,.13);
+  --r:10px;--r-s:6px;
+  --ff-head:'Playfair Display',Georgia,serif;
+  --ff:'IBM Plex Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow-x:hidden}
+body{font-family:var(--ff);background:var(--bg);color:var(--txt);font-size:15px;line-height:1.5}
+
+/* ── HEADER ─────────────────────────────────────── */
+#app-header{
+  position:sticky;top:0;z-index:200;
+  background:linear-gradient(135deg,var(--green-d) 0%,var(--green) 100%);
+  color:#fff;padding:10px 14px;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  box-shadow:0 2px 12px rgba(0,0,0,.25);
+}
+#app-header h1{font-family:var(--ff-head);font-size:1.05rem;font-weight:700;display:flex;align-items:center;gap:6px;letter-spacing:.3px}
+.hdr-right{display:flex;align-items:center;gap:6px}
+.badge-mode{background:var(--amber);color:#fff;padding:2px 8px;border-radius:12px;font-size:.7rem;font-weight:700;letter-spacing:.5px}
+.badge-mode.test{background:var(--orange)}
+.sync-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:.75rem;font-family:var(--ff);font-weight:600;display:flex;align-items:center;gap:4px;transition:.2s}
+.sync-pill:hover{background:rgba(255,255,255,.25)}
+
+/* ── LAYOUT ──────────────────────────────────────── */
+#app-layout{display:flex;min-height:calc(100vh - 48px)}
+#side-nav{width:190px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:8px 0;position:sticky;top:48px;height:calc(100vh - 48px);overflow-y:auto}
+#main{flex:1;min-width:0}
+#bot-nav{display:none}
+
+@media(max-width:767px){
+  #side-nav{display:none}
+  #bot-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:150;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -2px 10px rgba(0,0,0,.08)}
+  #bot-nav .nv{flex:1;display:flex;flex-direction:column;align-items:center;padding:7px 2px 5px;cursor:pointer;color:var(--txt-3);font-size:.6rem;font-weight:500;border:none;background:none;font-family:var(--ff);gap:2px;min-width:0}
+  #bot-nav .nv .ni{font-size:1.25rem;line-height:1}
+  #bot-nav .nv.on{color:var(--green)}
+  #bot-nav .nv span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;text-align:center}
+  #main{padding-bottom:70px}
+}
+
+.sv-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;color:var(--txt-2);font-size:.875rem;font-weight:500;border:none;background:none;width:100%;text-align:left;transition:.15s;border-left:3px solid transparent;font-family:var(--ff)}
+.sv-item:hover{background:var(--bg);color:var(--green)}
+.sv-item.on{color:var(--green);background:var(--green-xl);border-left-color:var(--green);font-weight:600}
+.sv-item .ni{font-size:1.1rem}
+.sv-sep{height:1px;background:var(--border-l);margin:6px 0}
+
+/* ── SECTIONS ─────────────────────────────────────── */
+.sec{display:none;padding:16px;animation:secIn .18s ease}
+.sec.on{display:block}
+@keyframes secIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* ── CARDS ─────────────────────────────────────────── */
+.card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--sh);margin-bottom:14px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+.card-title{font-size:.95rem;font-weight:700;color:var(--green-d);display:flex;align-items:center;gap:6px}
+.sec-title{font-family:var(--ff-head);font-size:1.4rem;color:var(--green-d);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* ── MONTH NAV ──────────────────────────────────── */
+.mnav{display:flex;align-items:center;gap:10px;background:var(--surface);padding:9px 14px;border-radius:var(--r);box-shadow:var(--sh);margin-bottom:14px}
+.mnav button{background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--green);padding:4px 8px;border-radius:4px;font-family:var(--ff)}
+.mnav button:hover{background:var(--bg)}
+.mnav .mlbl{flex:1;text-align:center;font-weight:700;font-size:1rem}
+
+/* ── STATS ─────────────────────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--surface);border-radius:var(--r-s);padding:12px;text-align:center;box-shadow:var(--sh);border-top:3px solid var(--green)}
+.stat.amber{border-top-color:var(--amber)}
+.stat.teal{border-top-color:var(--teal)}
+.stat.red{border-top-color:var(--red)}
+.stat-v{font-size:1.4rem;font-weight:800;color:var(--green-d)}
+.stat-l{font-size:.68rem;color:var(--txt-3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+
+/* ── BUTTONS ─────────────────────────────────────── */
+.btn{padding:9px 14px;border-radius:var(--r-s);border:none;cursor:pointer;font-size:.85rem;font-weight:600;display:inline-flex;align-items:center;gap:5px;transition:.15s;font-family:var(--ff);text-decoration:none;white-space:nowrap}
+.btn-p{background:var(--green);color:#fff}.btn-p:hover{background:var(--green-l)}
+.btn-a{background:var(--amber);color:#fff}.btn-a:hover{background:var(--amber-l)}
+.btn-d{background:var(--red);color:#fff}
+.btn-o{background:transparent;color:var(--green);border:2px solid var(--green)}.btn-o:hover{background:var(--green);color:#fff}
+.btn-ghost{background:var(--bg);color:var(--txt-2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--border-l)}
+.btn-sm{padding:5px 10px;font-size:.78rem}
+.btn-xs{padding:3px 7px;font-size:.72rem}
+.btn-icon{width:34px;height:34px;border-radius:50%;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:.95rem;display:inline-flex;align-items:center;justify-content:center;transition:.15s;font-family:var(--ff)}
+.btn-icon:hover{background:var(--green);color:#fff}
+
+/* ── FORMS ─────────────────────────────────────── */
+.fg{margin-bottom:11px}
+.fl{display:block;font-size:.75rem;font-weight:600;color:var(--txt-3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+.fc{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r-s);font-size:.9rem;font-family:var(--ff);background:#fff;color:var(--txt);transition:.2s}
+.fc:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(45,80,22,.1)}
+.fc-sm{padding:6px 9px;font-size:.83rem}
+.frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.fcheck{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r-s);cursor:pointer;background:#fff}
+.fcheck input[type=checkbox]{width:17px;height:17px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+
+/* ── ALERTS / BADGES ─────────────────────────────── */
+.alert{padding:10px 13px;border-radius:var(--r-s);margin-bottom:10px;font-size:.85rem;display:flex;align-items:flex-start;gap:7px;border-left:4px solid}
+.alert-e{background:var(--err-l);border-color:var(--err);color:#7F1D1D}
+.alert-w{background:var(--warn-l);border-color:var(--warn);color:#78350F}
+.alert-s{background:var(--ok-l);border-color:var(--ok);color:#14532D}
+.alert-i{background:#EFF6FF;border-color:var(--blue);color:#1E3A8A}
+.bdg{display:inline-block;padding:2px 7px;border-radius:12px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.bdg-ok{background:var(--ok-l);color:#14532D}
+.bdg-warn{background:var(--warn-l);color:#78350F}
+.bdg-err{background:var(--err-l);color:#7F1D1D}
+.bdg-gray{background:#F3F4F6;color:#374151}
+.bdg-blue{background:#DBEAFE;color:#1E3A8A}
+.bdg-dop{background:linear-gradient(135deg,#FCD34D,#F59E0B);color:#1A1A1A}
+.bdg-nd{background:#E5E7EB;color:#374151}
+.bdg-auto{background:#E0F2FE;color:#0C4A6E}
+.bdg-amber{background:var(--amber-xl);color:#78350F}
+
+/* ── TABLES ─────────────────────────────────────── */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r-s)}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:var(--green-d);color:#fff;padding:9px 8px;text-align:left;font-weight:600;white-space:nowrap;font-size:.78rem;letter-spacing:.2px}
+th:first-child{border-radius:var(--r-s) 0 0 0}
+th:last-child{border-radius:0 var(--r-s) 0 0}
+td{padding:7px 8px;border-bottom:1px solid var(--border-l);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(45,80,22,.025)}
+.tfoot td{background:var(--green-d);color:#fff;font-weight:700;border-bottom:none;padding:9px 8px}
+.tfoot-sub td{background:var(--green);color:#fff;font-weight:600;font-size:.79rem}
+
+/* ── MODAL ───────────────────────────────────────── */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:14px}
+.moverlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--r);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column}
+.modal-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
+.modal-title{font-weight:700;font-size:.95rem;color:var(--green-d)}
+.modal-x{font-size:1.4rem;cursor:pointer;background:none;border:none;color:var(--txt-3);line-height:1;padding:4px;font-family:var(--ff)}
+.modal-body{padding:18px;flex:1}
+.modal-ft{padding:13px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:#fff;position:sticky;bottom:0}
+
+/* ── TOAST ───────────────────────────────────────── */
+#toast-box{position:fixed;top:60px;right:14px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{padding:10px 14px;border-radius:var(--r-s);color:#fff;font-size:.85rem;font-weight:500;box-shadow:var(--sh-l);animation:tIn .25s ease,tOut .3s ease 2.5s forwards;max-width:280px;pointer-events:none}
+.toast-s{background:var(--ok)}.toast-e{background:var(--red)}.toast-w{background:var(--warn)}.toast-i{background:var(--blue)}
+@keyframes tIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+@keyframes tOut{from{opacity:1}to{opacity:0;transform:translateX(40%)}}
+
+/* ── FAB ─────────────────────────────────────────── */
+.fab{position:fixed;bottom:82px;right:18px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#fff;font-size:1.5rem;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(45,80,22,.4);display:flex;align-items:center;justify-content:center;z-index:100;transition:.2s;font-family:var(--ff)}
+.fab:hover{background:var(--green-l);transform:scale(1.05)}
+@media(min-width:768px){.fab{bottom:18px}}
+
+/* ── WAREHOUSE CARDS ─────────────────────────────── */
+.wh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+.wh-card{background:#fff;border-radius:var(--r-s);padding:11px;box-shadow:var(--sh);border-left:4px solid}
+.wh-card.tavoli{border-left-color:#94A3B8}
+.wh-card.asciugatura{border-left-color:var(--amber)}
+.wh-card.cella{border-left-color:var(--green)}
+
+/* ── LOT BLOCKS (vendite) ───────────────────────── */
+.lot-block{border:1.5px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.lot-block-hd{background:linear-gradient(90deg,var(--green-d),var(--green));color:#fff;padding:9px 13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:8px}
+.lot-block-bd{padding:12px;display:none}
+.lot-block-bd.open{display:block}
+
+/* ── MISC ────────────────────────────────────────── */
+.empty{text-align:center;padding:36px 18px;color:var(--txt-3)}
+.empty .ei{font-size:2.8rem;margin-bottom:10px}
+hr.sep{border:none;border-top:1px solid var(--border-l);margin:12px 0}
+.pill-row{display:flex;flex-wrap:wrap;gap:5px}
+.conf-ok{color:var(--ok);font-weight:600}
+.conf-nc{color:var(--err);font-weight:600}
+.conf-pend{color:var(--warn);font-weight:600}
+.conf-na{color:var(--txt-3)}
+.mini{font-size:.75rem;color:var(--txt-3)}
+.input-group{display:flex;gap:0}
+.input-group .fc{border-radius:var(--r-s) 0 0 var(--r-s)}
+.input-group .btn{border-radius:0 var(--r-s) var(--r-s) 0;white-space:nowrap}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--green);color:#fff;border-radius:12px;font-size:.75rem;font-weight:600}
+.tag-x{cursor:pointer;background:none;border:none;color:rgba(255,255,255,.7);font-size:1rem;line-height:1;padding:0 1px}
+.tag-x:hover{color:#fff}
+.divider-label{text-align:center;font-size:.75rem;font-weight:700;color:var(--txt-3);text-transform:uppercase;letter-spacing:.5px;margin:10px 0;position:relative}
+.divider-label::before,.divider-label::after{content:'';position:absolute;top:50%;width:calc(50% - 40px);height:1px;background:var(--border)}
+.divider-label::before{left:0}.divider-label::after{right:0}
+.sticky-bar{position:sticky;bottom:70px;background:var(--green-d);color:#fff;padding:8px 14px;display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;font-weight:600;z-index:50;border-radius:0 0 var(--r) var(--r)}
+@media(min-width:768px){.sticky-bar{bottom:0}}
+.progress-b{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:3px}
+.progress-f{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+select.fc option{font-family:var(--ff)}
+.bollino-sug{padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-s);cursor:pointer;font-size:.82rem;background:#fff;transition:.15s}
+.bollino-sug:hover{background:var(--green);color:#fff;border-color:var(--green)}
+.bollino-sug.used{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+.ddt-row-actions{display:flex;gap:4px;align-items:center}
+.warn-dop{background:var(--warn-l);border:1px solid var(--warn);color:#78350F;padding:6px 10px;border-radius:var(--r-s);font-size:.8rem;margin-bottom:8px}
+/* Dashboard alert strip */
+.alert-strip{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+/* TABS */
+.tab-bar{display:flex;gap:0;margin-bottom:12px;border:1.5px solid var(--border);border-radius:var(--r-s);overflow:hidden}
+.tab-btn{flex:1;padding:8px;border:none;background:#fff;cursor:pointer;font-size:.82rem;font-weight:500;font-family:var(--ff);color:var(--txt-2);transition:.15s;border-right:1px solid var(--border)}
+.tab-btn:last-child{border-right:none}
+.tab-btn.on{background:var(--green);color:#fff;font-weight:700}
+/* CONF CARDS */
+.conf-lot-card{border:1.5px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:9px;background:#fff}
+.conf-lot-card.urgent{border-color:var(--red);background:#FFF8F8}
+.conf-lot-card.warning{border-color:var(--warn);background:#FFFBF0}
+.conf-lot-card.ok{border-color:var(--ok);background:#F0FFF4}
+/* CHARTS */
+.chart-wrap{position:relative;height:220px;margin-top:10px}
+/* SEARCH RESULTS */
+.search-result-item{padding:10px 12px;border-bottom:1px solid var(--border-l);cursor:pointer;transition:.15s}
+.search-result-item:hover{background:var(--bg)}
+.search-result-item:last-child{border-bottom:none}
+/* IVA BOX */
+.iva-box{background:var(--green-xl);border-radius:var(--r-s);padding:10px 12px;font-size:.85rem}
+.iva-row{display:flex;justify-content:space-between;padding:2px 0}
+.iva-row.total{font-weight:700;font-size:.95rem;border-top:1px solid var(--border);margin-top:6px;padding-top:6px}
+/* PURPLE STAT */
+.stat.purple{border-top-color:#7C3AED}
+.bdg-purple{background:#EDE9FE;color:#5B21B6}
+/* HDR SEARCH */
+.hdr-search{flex:1;max-width:300px;position:relative}
+.hdr-search input{width:100%;padding:6px 28px 6px 10px;border:1px solid rgba(255,255,255,.3);border-radius:20px;background:rgba(255,255,255,.15);color:#fff;font-size:.8rem;font-family:var(--ff);outline:none}
+.hdr-search input::placeholder{color:rgba(255,255,255,.6)}
+.hdr-search input:focus{background:rgba(255,255,255,.25)}
+.hdr-search-btn{position:absolute;right:7px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,.8);cursor:pointer;font-size:.85rem}
+@media(max-width:767px){.hdr-search{display:none}}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header id="app-header">
+  <h1>🧀 Merlo Bianco</h1>
+  <div class="hdr-search">
+    <input type="text" id="hdr-search-input" placeholder="🔍 Cerca lotto, bollino, cliente, DDT…" onkeydown="if(event.key==='Enter')Search.run(this.value)">
+    <button class="hdr-search-btn" onclick="Search.run(document.getElementById('hdr-search-input').value)">⏎</button>
+  </div>
+  <div class="hdr-right">
+    <span id="mode-badge" class="badge-mode">PROD</span>
+    <button class="sync-pill" onclick="App.toggleMode()">⚙ Modalità</button>
+    <button class="sync-pill" id="btn-drive" onclick="Drive.connect()">☁ Drive</button>
+  </div>
+</header>
+
+<!-- ── LAYOUT ── -->
+<div id="app-layout">
+  <!-- Side nav (desktop) -->
+  <nav id="side-nav">
+    <button class="sv-item on" data-sec="dashboard"><span class="ni">🏠</span> Dashboard</button>
+    <button class="sv-item" data-sec="produzione"><span class="ni">🏭</span> Produzione</button>
+    <button class="sv-item" data-sec="conformita"><span class="ni">✅</span> Conformità</button>
+    <button class="sv-item" data-sec="magazzino"><span class="ni">📦</span> Magazzino</button>
+    <button class="sv-item" data-sec="vendite"><span class="ni">💰</span> Vendite</button>
+    <div class="sv-sep"></div>
+    <button class="sv-item" data-sec="bollini"><span class="ni">🏷</span> Bollini</button>
+    <button class="sv-item" data-sec="ddt"><span class="ni">📄</span> DDT</button>
+    <button class="sv-item" data-sec="clienti"><span class="ni">👥</span> Clienti</button>
+    <div class="sv-sep"></div>
+    <button class="sv-item" data-sec="analisi"><span class="ni">🔬</span> Analisi Latte</button>
+    <button class="sv-item" data-sec="report"><span class="ni">📊</span> Report</button>
+    <button class="sv-item" data-sec="impostazioni"><span class="ni">⚙</span> Impostazioni</button>
+  </nav>
+
+  <!-- Main content -->
+  <main id="main">
+
+    <!-- ════ DASHBOARD ════ -->
+    <section class="sec on" id="sec-dashboard">
+      <div class="sec-title">🏠 Dashboard</div>
+      <div id="dash-alerts" class="alert-strip"></div>
+      <div id="dash-stats" class="stats-row"></div>
+      <div class="card"><div class="card-hd"><div class="card-title">📦 Lotti in magazzino</div></div><div id="dash-lots"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="card"><div class="card-hd"><div class="card-title">📅 Ultimo lotto</div></div><div id="dash-last-lot"></div></div>
+        <div class="card"><div class="card-hd"><div class="card-title">📄 Ultimo DDT</div></div><div id="dash-last-ddt"></div></div>
+      </div>
+      <div class="card"><div class="card-hd"><div class="card-title">🏷 Bollini disponibili</div><span id="dash-bollini-count" class="bdg bdg-ok"></span></div><div id="dash-bollini-preview"></div></div>
+    </section>
+
+    <!-- ════ PRODUZIONE ════ -->
+    <section class="sec" id="sec-produzione">
+      <div class="sec-title">🏭 Registro Produzione</div>
+      <div class="mnav">
+        <button onclick="Prod.prevMonth()">‹</button>
+        <div class="mlbl" id="prod-month-label"></div>
+        <button onclick="Prod.nextMonth()">›</button>
+        <button class="btn btn-p btn-sm" onclick="Prod.openAdd()">+ Lotto</button>
+      </div>
+      <div id="prod-stats" class="stats-row"></div>
+      <div class="card">
+        <div class="tw" id="prod-table-wrap"></div>
+      </div>
+    </section>
+
+    <!-- ════ CONFORMITA ════ -->
+    <section class="sec" id="sec-conformita">
+      <div class="sec-title">✅ Conformità</div>
+      <div id="conf-alerts" class="alert-strip"></div>
+      <div class="tab-bar">
+        <button class="tab-btn on" onclick="Conf.showTab('fisiche',this)">🏋 Fisiche</button>
+        <button class="tab-btn" onclick="Conf.showTab('organolettiche',this)">👅 Organolettiche</button>
+        <button class="tab-btn" onclick="Conf.showTab('chimiche',this)">⚗ Chimiche</button>
+      </div>
+      <div id="conf-tab-fisiche"></div>
+      <div id="conf-tab-organolettiche" style="display:none"></div>
+      <div id="conf-tab-chimiche" style="display:none"></div>
+    </section>
+
+    <!-- ════ ANALISI LATTE ════ -->
+    <section class="sec" id="sec-analisi">
+      <div class="sec-title">🔬 Analisi Latte</div>
+      <div id="analisi-alerts" class="alert-strip"></div>
+      <div class="tab-bar">
+        <button class="tab-btn on" onclick="Analisi.showTab('inserisci',this)">➕ Inserisci</button>
+        <button class="tab-btn" onclick="Analisi.showTab('storico',this)">📋 Storico</button>
+        <button class="tab-btn" onclick="Analisi.showTab('grafici',this)">📈 Grafici</button>
+      </div>
+      <div id="analisi-tab-inserisci"></div>
+      <div id="analisi-tab-storico" style="display:none"></div>
+      <div id="analisi-tab-grafici" style="display:none"></div>
+    </section>
+    <section class="sec" id="sec-vendite">
+      <div class="sec-title">💰 Registro Vendite</div>
+      <div class="mnav">
+        <button onclick="Sales.prevMonth()">‹</button>
+        <div class="mlbl" id="sales-month-label"></div>
+        <button onclick="Sales.nextMonth()">›</button>
+      </div>
+      <div id="sales-stats" class="stats-row"></div>
+      <div id="sales-lots"></div>
+    </section>
+
+    <!-- ════ MAGAZZINO ════ -->
+    <section class="sec" id="sec-magazzino">
+      <div class="sec-title">📦 Magazzino</div>
+      <div id="mag-stats" class="stats-row"></div>
+      <div id="mag-sections"></div>
+    </section>
+
+    <!-- ════ BOLLINI ════ -->
+    <section class="sec" id="sec-bollini">
+      <div class="sec-title">🏷 Gestione Bollini</div>
+      <div id="bol-stats" class="stats-row"></div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Carica bollini</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-p btn-sm" onclick="Bol.openImport()">📥 Importa range</button>
+            <button class="btn btn-ghost btn-sm" onclick="Bol.openSearch()">🔍 Cerca bollino</button>
+          </div>
+        </div>
+        <div id="bol-list"></div>
+      </div>
+    </section>
+
+    <!-- ════ DDT ════ -->
+    <section class="sec" id="sec-ddt">
+      <div class="sec-title">📄 DDT</div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Documenti di Trasporto</div>
+          <button class="btn btn-p btn-sm" onclick="DDT.openNew()">+ Nuovo DDT</button>
+        </div>
+        <div class="mnav" style="margin-top:0;margin-bottom:10px">
+          <button onclick="DDT.prevMonth()">‹</button>
+          <div class="mlbl" id="ddt-month-label"></div>
+          <button onclick="DDT.nextMonth()">›</button>
+        </div>
+        <div class="tw" id="ddt-table"></div>
+      </div>
+    </section>
+
+    <!-- ════ CLIENTI ════ -->
+    <section class="sec" id="sec-clienti">
+      <div class="sec-title">👥 Clienti</div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Anagrafica clienti</div>
+          <button class="btn btn-p btn-sm" onclick="Clients.openAdd()">+ Nuovo cliente</button>
+        </div>
+        <div id="clienti-list"></div>
+      </div>
+    </section>
+
+    <!-- ════ REPORT ════ -->
+    <section class="sec" id="sec-report">
+      <div class="sec-title">📊 Report e Export</div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Genera PDF</div></div>
+        <div class="frow">
+          <div class="fg"><label class="fl">Da data</label><input type="date" class="fc" id="rep-from"></div>
+          <div class="fg"><label class="fl">A data</label><input type="date" class="fc" id="rep-to"></div>
+        </div>
+        <div class="pill-row" style="gap:7px;margin-top:8px">
+          <button class="btn btn-p btn-sm" onclick="Report.pdfProd()">📄 Produzione</button>
+          <button class="btn btn-a btn-sm" onclick="Report.pdfSales()">📄 Vendite</button>
+          <button class="btn btn-ghost btn-sm" onclick="Report.pdfDisciplinare()">📄 Disciplinare DOP</button>
+          <button class="btn btn-ghost btn-sm" onclick="Report.pdfBollini()">📄 Bollini</button>
+          <button class="btn btn-ghost btn-sm" onclick="Report.pdfAnalisi()">📄 Analisi Latte</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">🔍 Tracciabilità</div></div>
+        <div class="fg">
+          <label class="fl">Cerca bollino (4 cifre), lotto, DDT o cliente</label>
+          <div class="input-group">
+            <input type="text" class="fc" id="trace-q" placeholder="es. 0234  /  12/03/2026  /  01C/26  /  Ristorante">
+            <button class="btn btn-p" onclick="Report.trace()">Cerca</button>
+          </div>
+        </div>
+        <div id="trace-result"></div>
+      </div>
+    </section>
+
+    <!-- ════ IMPOSTAZIONI ════ -->
+    <section class="sec" id="sec-impostazioni">
+      <div class="sec-title">⚙ Impostazioni</div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">🏢 Dati Azienda (mittente DDT)</div></div>
+        <div class="frow">
+          <div class="fg"><label class="fl">Ragione Sociale</label><input class="fc" id="cfg-nome" placeholder="Azienda Agricola Merlo Bianco"></div>
+          <div class="fg"><label class="fl">P.IVA / C.F.</label><input class="fc" id="cfg-piva" placeholder="01234567890"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label class="fl">Indirizzo</label><input class="fc" id="cfg-ind" placeholder="Via del Caseificio 1, 14040 Mombaldone AT"></div>
+          <div class="fg"><label class="fl">Telefono mio</label><input class="fc" id="cfg-tel" placeholder="+39 333 1234567"></div>
+        </div>
+        <div class="fg"><label class="fl">Codice Destinatario SDI</label><input class="fc" id="cfg-sdi" placeholder="0000000"></div>
+        <div class="fg"><label class="fl">Email</label><input type="email" class="fc" id="cfg-email" placeholder="info@merlobianco.it"></div>
+        <button class="btn btn-p" onclick="Settings.save()">💾 Salva impostazioni</button>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">☁ Google Drive Sync</div></div>
+        <div class="alert alert-i">ℹ Per abilitare la sincronizzazione automatica occorre creare un progetto Google Cloud gratuito con le credenziali OAuth. Segui le istruzioni e incolla qui il tuo Client ID.</div>
+        <div class="fg"><label class="fl">Google OAuth Client ID</label><input class="fc" id="cfg-gid" placeholder="123456789-xxxxx.apps.googleusercontent.com"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-p" onclick="Settings.saveGoogleId()">Salva Client ID</button>
+          <button class="btn btn-o" onclick="Drive.connect()">🔗 Connetti Drive</button>
+          <button class="btn btn-ghost" onclick="Drive.disconnect()">Disconnetti</button>
+        </div>
+        <div id="drive-status" style="margin-top:10px;font-size:.82rem;color:var(--txt-3)"></div>
+        <hr class="sep">
+        <p class="mini"><b>Come configurare:</b> Vai su <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → Crea progetto → API &amp; Servizi → Credenziali → Crea credenziali → OAuth 2.0 → Applicazione Web. Aggiungi l'URL di questo file come "Origine JavaScript autorizzata". Incolla il Client ID qui sopra.</p>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">🧪 Modalità Test</div></div>
+        <p class="mini" style="margin-bottom:10px">La modalità test usa un database separato con dati campione pre-caricati. I dati reali non vengono toccati.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-a" onclick="App.toggleMode()">Cambia modalità (attuale: <span id="cur-mode">PROD</span>)</button>
+          <button class="btn btn-ghost btn-sm" onclick="if(confirm('Ricaricare i dati campione nel database di TEST? I dati test esistenti verranno sovrascritti.'))TestData.load()">Ricarica dati campione</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">💾 Backup / Ripristino</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="App.exportJSON()">📤 Esporta JSON</button>
+          <button class="btn btn-ghost" onclick="App.importJSON()">📥 Importa JSON</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="App.handleImport(this)">
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title" style="color:var(--red)">⚠ Zona pericolosa</div></div>
+        <button class="btn btn-d btn-sm" onclick="App.resetDB()">🗑 Cancella tutti i dati (DB attivo)</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Bottom nav (mobile) -->
+<nav id="bot-nav">
+  <button class="nv on" data-sec="dashboard"><span class="ni">🏠</span><span>Home</span></button>
+  <button class="nv" data-sec="produzione"><span class="ni">🏭</span><span>Prod.</span></button>
+  <button class="nv" data-sec="conformita"><span class="ni">✅</span><span>Conf.</span></button>
+  <button class="nv" data-sec="vendite"><span class="ni">💰</span><span>Vendite</span></button>
+  <button class="nv" data-sec="bollini"><span class="ni">🏷</span><span>Bollini</span></button>
+  <button class="nv" data-sec="ddt"><span class="ni">📄</span><span>DDT</span></button>
+  <button class="nv" data-sec="analisi"><span class="ni">🔬</span><span>Analisi</span></button>
+  <button class="nv" data-sec="report"><span class="ni">📊</span><span>Report</span></button>
+</nav>
+
+<!-- ── TOAST ── -->
+<div id="toast-box"></div>
+
+<!-- ══════════════════ MODALS ══════════════════ -->
+
+<!-- Add/Edit Production Lot -->
+<div class="moverlay" id="m-prod">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-prod-title">Nuovo lotto produzione</div>
+      <button class="modal-x" onclick="closeModal('m-prod')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mp-edit-id">
+      <div class="frow">
+        <div class="fg"><label class="fl">Data / Lotto *</label><input type="date" class="fc" id="mp-date"></div>
+        <div class="fg"><label class="fl">Litri latte DOP *</label><input type="number" class="fc" id="mp-liters" step="0.1" min="0" placeholder="es. 80"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Numero forme *</label><input type="number" class="fc" id="mp-forms" min="1" placeholder="es. 12"></div>
+        <div class="fg"><label class="fl">Ore coagulazione</label><input type="text" class="fc" id="mp-coag" placeholder="es. 1h 30m"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Lotto caglio</label><input type="text" class="fc" id="mp-caglio" placeholder="es. CAG-2025-001"></div>
+        <div class="fg"><label class="fl">Sosta in stampi</label><input type="text" class="fc" id="mp-stampi" placeholder="es. 12 ore"></div>
+      </div>
+      <div class="fg">
+        <label class="fcheck">
+          <input type="checkbox" id="mp-siero">
+          <span>Utilizzato siero innesto</span>
+        </label>
+      </div>
+      <div class="fg"><label class="fl">Note</label><textarea class="fc" id="mp-note" rows="2" placeholder="Note aggiuntive..."></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-prod')">Annulla</button>
+      <button class="btn btn-p" onclick="Prod.saveLot()">💾 Salva lotto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Conformità -->
+<div class="moverlay" id="m-conf">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-conf-title">Conformità</div>
+      <button class="modal-x" onclick="closeModal('m-conf')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mc-lot-id">
+      <input type="hidden" id="mc-type">
+      <div id="mc-info" class="alert alert-i" style="margin-bottom:10px"></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Data rilevazione *</label><input type="date" class="fc" id="mc-date"></div>
+        <div class="fg">
+          <label class="fl">Esito *</label>
+          <select class="fc" id="mc-result">
+            <option value="">-- Seleziona --</option>
+            <option value="C">✅ Conforme</option>
+            <option value="NC">❌ Non Conforme</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Note</label><textarea class="fc" id="mc-note" rows="2"></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-conf')">Annulla</button>
+      <button class="btn btn-p" onclick="Prod.saveConf()">💾 Salva conformità</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Sale -->
+<div class="moverlay" id="m-sale">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-sale-title">Registra uscita</div>
+      <button class="modal-x" onclick="closeModal('m-sale')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ms-lot-id">
+      <input type="hidden" id="ms-edit-id">
+      <div id="ms-lot-info" class="alert alert-i" style="margin-bottom:10px"></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Data uscita *</label><input type="date" class="fc" id="ms-date"></div>
+        <div class="fg">
+          <label class="fl">Tipologia *</label>
+          <select class="fc" id="ms-type" onchange="Sales.onTypeChange()">
+            <option value="">-- Seleziona --</option>
+            <option value="dop">🏅 DOP</option>
+            <option value="nondop">📦 Non DOP</option>
+            <option value="autoconsumo">🧑‍🍳 Autoconsumo</option>
+            <option value="assaggi">👅 Assaggi</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Numero forme *</label><input type="number" class="fc" id="ms-qty" min="1" placeholder="1"></div>
+
+      <!-- DOP fields -->
+      <div id="ms-dop-fields" style="display:none">
+        <div id="ms-dop-warn" class="warn-dop" style="display:none"></div>
+        <div class="fg">
+          <label class="fl">Metodo vendita</label>
+          <select class="fc" id="ms-method" onchange="Sales.onMethodChange()">
+            <option value="">-- Seleziona --</option>
+            <option value="ddt">📄 DDT</option>
+            <option value="scontrino">🧾 Scontrino / Ricevuta</option>
+          </select>
+        </div>
+        <div id="ms-ddt-fields" style="display:none">
+          <div class="fg">
+            <label class="fl">Numero DDT</label>
+            <select class="fc" id="ms-ddt-id">
+              <option value="">-- Seleziona DDT --</option>
+            </select>
+          </div>
+        </div>
+        <div id="ms-scontrino-fields" style="display:none">
+          <div class="fg"><label class="fl">Data scontrino</label><input type="date" class="fc" id="ms-scontrino-date"></div>
+        </div>
+        <div class="fg">
+          <label class="fl">Bollini DOP (uno per forma)</label>
+          <div id="ms-bollini-tags" class="chip-container" style="min-height:44px;margin-bottom:6px"></div>
+          <div id="ms-bollini-sug" class="pill-row" style="margin-top:4px"></div>
+          <div class="input-group" style="margin-top:6px">
+            <input type="text" class="fc fc-sm" id="ms-bol-input" placeholder="Aggiungi bollino (es. 0001)" maxlength="4">
+            <button class="btn btn-p btn-sm" onclick="Sales.addBollinoManual()">Aggiungi</button>
+          </div>
+          <div class="mini" style="margin-top:4px">Inserisci solo le 4 cifre del bollino. Anno corrente suggerito.</div>
+        </div>
+      </div>
+
+      <!-- Non-DOP fields -->
+      <div id="ms-nondop-fields" style="display:none">
+        <div class="fg">
+          <label class="fl">Metodo vendita</label>
+          <select class="fc" id="ms-nd-method">
+            <option value="">-- Seleziona --</option>
+            <option value="ddt">📄 DDT</option>
+            <option value="scontrino">🧾 Scontrino / Ricevuta</option>
+            <option value="altro">Altro</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Riferimento (DDT num. o data scontrino)</label><input type="text" class="fc" id="ms-nd-ref" placeholder="es. 05C/26 oppure 15/03/2026"></div>
+      </div>
+
+      <div class="fg"><label class="fl">Note</label><textarea class="fc" id="ms-note" rows="2"></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-sale')">Annulla</button>
+      <button class="btn btn-p" onclick="Sales.saveSale()">💾 Registra uscita</button>
+    </div>
+  </div>
+</div>
+
+<!-- DDT Modal -->
+<div class="moverlay" id="m-ddt">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-ddt-title">Nuovo DDT</div>
+      <button class="modal-x" onclick="closeModal('m-ddt')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="md-edit-id">
+      <div class="frow">
+        <div class="fg"><label class="fl">Numero DDT *</label><input type="text" class="fc" id="md-num" placeholder="es. 01C/26" readonly style="background:#f5f5f5"></div>
+        <div class="fg"><label class="fl">Data *</label><input type="date" class="fc" id="md-date"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Cliente *</label>
+        <select class="fc" id="md-client" onchange="DDT.onClientChange()">
+          <option value="">-- Seleziona cliente --</option>
+        </select>
+      </div>
+      <div id="md-client-preview" style="display:none;font-size:.8rem;color:var(--txt-3);margin-top:-6px;margin-bottom:10px;padding:6px 10px;background:var(--bg);border-radius:var(--r-s)"></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Telefono mio</label><input type="text" class="fc" id="md-mytel" placeholder="+39 333 1234567"></div>
+        <div class="fg"><label class="fl">Causale</label><input type="text" class="fc" id="md-causale" value="Cessione a titolo oneroso"></div>
+      </div>
+      <hr class="sep">
+      <div class="card-title" style="margin-bottom:10px">Righe DDT</div>
+      <div id="md-rows"></div>
+      <button class="btn btn-ghost btn-sm" onclick="DDT.addRow()">+ Aggiungi riga</button>
+      <hr class="sep">
+      <div class="iva-box">
+        <div class="iva-row total"><span>TOTALE (IVA inclusa)</span><span id="md-totale">0,00 &#8364;</span></div>
+      </div>
+      <div class="fg" style="margin-top:8px"><label class="fl">Annotazioni</label><textarea class="fc" id="md-note" rows="2"></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-ddt')">Annulla</button>
+      <button class="btn btn-p" onclick="DDT.save()">💾 Salva DDT</button>
+    </div>
+  </div>
+</div>
+
+<!-- Client Modal -->
+<div class="moverlay" id="m-client">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-client-title">Nuovo cliente</div>
+      <button class="modal-x" onclick="closeModal('m-client')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mcl-edit-id">
+      <div class="frow">
+        <div class="fg"><label class="fl">Nome / Ragione Sociale *</label><input class="fc" id="mcl-nome"></div>
+        <div class="fg"><label class="fl">P.IVA / C.F.</label><input class="fc" id="mcl-piva" placeholder="01234567890"></div>
+      </div>
+      <div class="fg"><label class="fl">Indirizzo</label><input class="fc" id="mcl-ind"></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Codice Univoco SDI</label><input class="fc" id="mcl-sdi" placeholder="0000000"></div>
+        <div class="fg"><label class="fl">Telefono</label><input class="fc" id="mcl-tel"></div>
+      </div>
+      <div class="fg"><label class="fl">Email</label><input type="email" class="fc" id="mcl-email"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-client')">Annulla</button>
+      <button class="btn btn-p" onclick="Clients.save()">💾 Salva cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bollini Import -->
+<div class="moverlay" id="m-bol">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title">📥 Importa range bollini</div>
+      <button class="modal-x" onclick="closeModal('m-bol')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-i">Inserisci il range di bollini da importare. Il formato è MB0001/24 dove 24 è l'anno di stampa.</div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Da numero (4 cifre) *</label><input type="number" class="fc" id="mb-from" min="1" max="9999" placeholder="0001"></div>
+        <div class="fg"><label class="fl">A numero (4 cifre) *</label><input type="number" class="fc" id="mb-to" min="1" max="9999" placeholder="0100"></div>
+      </div>
+      <div class="fg"><label class="fl">Anno stampa (2 cifre) *</label><input type="text" class="fc" id="mb-year" maxlength="2" placeholder="es. 24 oppure 26"></div>
+      <div id="mb-preview" class="mini" style="margin-top:6px"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-bol')">Annulla</button>
+      <button class="btn btn-p" onclick="Bol.importRange()">📥 Importa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bollino Search -->
+<div class="moverlay" id="m-bol-search">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title">🔍 Cerca bollino</div>
+      <button class="modal-x" onclick="closeModal('m-bol-search')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label class="fl">Numero bollino (4 cifre)</label>
+        <div class="input-group">
+          <input type="text" class="fc" id="bs-q" maxlength="4" placeholder="es. 0234">
+          <button class="btn btn-p" onclick="Bol.doSearch()">Cerca</button>
+        </div>
+      </div>
+      <div id="bs-result" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="moverlay" id="m-confirm">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-hd">
+      <div class="modal-title">Conferma</div>
+      <button class="modal-x" onclick="closeModal('m-confirm')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="m-confirm-text"></p>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-confirm')">Annulla</button>
+      <button class="btn btn-d" id="m-confirm-ok">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ANALISI LATTE MODAL ════ -->
+<div class="moverlay" id="m-analisi">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-analisi-title">Nuova analisi latte</div>
+      <button class="modal-x" onclick="closeModal('m-analisi')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ma-edit-id">
+      <div class="frow">
+        <div class="fg"><label class="fl">Data *</label><input type="date" class="fc" id="ma-date"></div>
+        <div class="fg"><label class="fl">Tipo *</label>
+          <select class="fc" id="ma-type" onchange="Analisi.onTypeChange()">
+            <option value="daily">📅 Dato giornaliero (litri)</option>
+            <option value="lab">🔬 Analisi laboratorio</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Litri latte *</label><input type="number" class="fc" id="ma-liters" step="0.1" min="0" placeholder="80"></div>
+      <div id="ma-lab-fields">
+        <hr class="sep">
+        <p class="mini" style="margin-bottom:8px;font-weight:600">Parametri analisi laboratorio</p>
+        <div class="frow">
+          <div class="fg"><label class="fl">Grasso %</label><input type="number" class="fc fc-sm" id="ma-fat" step="0.01" placeholder="3.80"></div>
+          <div class="fg"><label class="fl">Proteine %</label><input type="number" class="fc fc-sm" id="ma-prot" step="0.01" placeholder="3.20"></div>
+          <div class="fg"><label class="fl">Lattosio %</label><input type="number" class="fc fc-sm" id="ma-lact" step="0.01" placeholder="4.50"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label class="fl">Caseine %</label><input type="number" class="fc fc-sm" id="ma-cas" step="0.01" placeholder="2.60"></div>
+          <div class="fg"><label class="fl">Indice caseinico</label><input type="number" class="fc fc-sm" id="ma-ci" step="0.01" placeholder="80.0"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label class="fl">Cellule somatiche (×1000/ml)</label><input type="number" class="fc fc-sm" id="ma-sc" step="1" placeholder="150"></div>
+          <div class="fg"><label class="fl">Carica batterica (UFC/ml)</label><input type="number" class="fc fc-sm" id="ma-bc" step="1" placeholder="5000"></div>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Note</label><textarea class="fc" id="ma-note" rows="2"></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-analisi')">Annulla</button>
+      <button class="btn btn-p" onclick="Analisi.save()">💾 Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SEARCH RESULTS MODAL ════ -->
+<div class="moverlay" id="m-search">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-hd">
+      <div class="modal-title">🔍 Risultati ricerca</div>
+      <button class="modal-x" onclick="closeModal('m-search')">✕</button>
+    </div>
+    <div class="modal-body" id="m-search-body"></div>
+  </div>
+</div>
+
+<!-- ════════════════ SCRIPT ════════════════ -->
+<script>
+/* ── GLOBALS ── */
+const VERSION = '1.0.0';
+const YEAR = new Date().getFullYear();
+const MONTHS_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+let _mode = 'prod'; // 'prod' | 'test'
+let _db;  // current database reference
+
+/* ── DATA MODEL ── */
+function emptyDB(){
+  return {
+    settings:{
+      azienda:{nome:'',indirizzo:'',piva:'',telefono:'',sdi:'',email:''},
+      myPhone:'',googleClientId:'',
+      gdrive:{fileId:null,token:null,email:null},
+      nextDDT:1
+    },
+    production:{},
+    sales:{},
+    bollini:{},
+    ddt:{},
+    clients:{},
+    milkAnalysis:{}
+  };
+}
+
+/* ── PERSISTENCE ── */
+const Store = {
+  key(mode){ return `mb-gest-${mode}`; },
+  load(mode){
+    try{
+      const raw = localStorage.getItem(Store.key(mode));
+      if(!raw) return emptyDB();
+      return Object.assign(emptyDB(), JSON.parse(raw));
+    }catch(e){ return emptyDB(); }
+  },
+  save(mode, db){
+    try{
+      localStorage.setItem(Store.key(mode), JSON.stringify(db));
+    }catch(e){ toast('Errore salvataggio locale','e'); }
+  },
+  saveNow(){ Store.save(_mode, _db); Drive.scheduleSave(); }
+};
+
+/* ── UTILS ── */
+function uuid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+function fmtDate(iso){ if(!iso) return '—'; const[y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function isoToLot(iso){ if(!iso) return ''; const[y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function lotToIso(lot){ if(!lot) return ''; const p=lot.split('/'); if(p.length!==3) return ''; return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; }
+function daysSince(isoDate){ const d1=new Date(isoDate),d2=new Date(); return Math.floor((d2-d1)/(1000*60*60*24)); }
+function pad4(n){ return String(n).padStart(4,'0'); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function fmtBollino(num,yr){ return `MB${pad4(num)}/${yr}`; }
+function fmtEuro(n){ return Number(n||0).toFixed(2).replace('.',',')+'€'; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+function toast(msg, type='s', dur=3000){
+  const box=document.getElementById('toast-box');
+  const el=document.createElement('div');
+  el.className=`toast toast-${type}`;
+  el.textContent=msg;
+  box.appendChild(el);
+  setTimeout(()=>el.remove(), dur+300);
+}
+
+function confirm2(msg, cb){
+  document.getElementById('m-confirm-text').textContent=msg;
+  const btn=document.getElementById('m-confirm-ok');
+  btn.onclick=()=>{ closeModal('m-confirm'); cb(); };
+  openModal('m-confirm');
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+/* ── ROUTER ── */
+const Router = {
+  current: 'dashboard',
+  go(sec){
+    document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+    document.querySelectorAll('[data-sec]').forEach(b=>b.classList.remove('on'));
+    const el = document.getElementById(`sec-${sec}`);
+    if(el) el.classList.add('on');
+    document.querySelectorAll(`[data-sec="${sec}"]`).forEach(b=>b.classList.add('on'));
+    Router.current=sec;
+    Router.render(sec);
+  },
+  render(sec){
+    if(sec==='dashboard') Dash.render();
+    else if(sec==='produzione') Prod.render();
+    else if(sec==='conformita') Conf.render();
+    else if(sec==='vendite') Sales.render();
+    else if(sec==='magazzino') Mag.render();
+    else if(sec==='bollini') Bol.render();
+    else if(sec==='ddt') DDT.render();
+    else if(sec==='clienti') Clients.render();
+    else if(sec==='analisi') Analisi.render();
+    else if(sec==='report') Report.init();
+    else if(sec==='impostazioni') Settings.render();
+  }
+};
+
+/* ── APP ── */
+const App = {
+  init(){
+    _mode = localStorage.getItem('mb-mode')||'prod';
+    _db = Store.load(_mode);
+    App.updateModeUI();
+    Settings.loadUI();
+    Router.go('dashboard');
+    Drive.initStatus();
+
+    document.querySelectorAll('[data-sec]').forEach(btn=>{
+      btn.addEventListener('click',()=>Router.go(btn.dataset.sec));
+    });
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape') document.querySelectorAll('.moverlay.open').forEach(m=>m.classList.remove('open'));
+    });
+    // Close modal on overlay click
+    document.querySelectorAll('.moverlay').forEach(ov=>{
+      ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('open'); });
+    });
+    // Auto-check alerts every 5 min
+    setInterval(Alerts.check, 300000);
+  },
+  toggleMode(){
+    const newMode = _mode==='prod'?'test':'prod';
+    if(newMode==='test' && Object.keys(Store.load('test').production).length===0){
+      TestData.load();
+    }
+    _mode=newMode;
+    localStorage.setItem('mb-mode',_mode);
+    _db=Store.load(_mode);
+    App.updateModeUI();
+    Settings.loadUI();
+    Router.render(Router.current);
+    toast(`Modalità ${_mode.toUpperCase()} attivata`,'i');
+  },
+  updateModeUI(){
+    const badge=document.getElementById('mode-badge');
+    const curMode=document.getElementById('cur-mode');
+    badge.textContent=_mode.toUpperCase();
+    badge.className=`badge-mode${_mode==='test'?' test':''}`;
+    if(curMode) curMode.textContent=_mode.toUpperCase();
+  },
+  exportJSON(){
+    const data=JSON.stringify(_db,null,2);
+    const a=document.createElement('a');
+    a.href='data:application/json,'+encodeURIComponent(data);
+    a.download=`merlo-bianco-backup-${today()}.json`;
+    a.click();
+  },
+  importJSON(){
+    document.getElementById('import-file').click();
+  },
+  handleImport(input){
+    const f=input.files[0];
+    if(!f) return;
+    const r=new FileReader();
+    r.onload=e=>{
+      try{
+        const d=JSON.parse(e.target.result);
+        confirm2('Sovrascrivere tutti i dati del database attivo con il file importato?',()=>{
+          _db=Object.assign(emptyDB(),d);
+          Store.saveNow();
+          toast('Importazione completata','s');
+          Router.render(Router.current);
+        });
+      }catch(err){ toast('File JSON non valido','e'); }
+    };
+    r.readAsText(f);
+    input.value='';
+  },
+  resetDB(){
+    confirm2(`Cancellare TUTTI i dati del database ${_mode.toUpperCase()}? Operazione irreversibile!`,()=>{
+      _db=emptyDB();
+      Store.saveNow();
+      Router.render(Router.current);
+      toast('Database azzerato','w');
+    });
+  }
+};
+
+const Alerts = {
+  check(){
+    const issues=[];
+    Object.entries(_db.production).forEach(([id,lot])=>{
+      const days=daysSince(id);
+      if(!lot.physConf && days>=4){
+        if(days===4) issues.push({level:'w',msg:`⏰ Lotto ${isoToLot(id)}: inserire conformità FISICHE domani (giorno 5)`});
+        else if(days===5) issues.push({level:'e',msg:`🚨 Lotto ${isoToLot(id)}: conformità FISICHE da inserire OGGI (giorno 5)!`});
+        else if(days>5) issues.push({level:'e',msg:`🚨 Lotto ${isoToLot(id)}: conformità FISICHE non inserite (giorno ${days})`});
+      }
+    });
+    // Organoleptic weekly reminder
+    const weekAgo=new Date();weekAgo.setDate(weekAgo.getDate()-7);
+    const wA=weekAgo.toISOString().split('T')[0];
+    let hasAutoThisWeek=false,hasOrgThisWeek=false;
+    Object.values(_db.sales||{}).flat().forEach(s=>{if(s.date>=wA&&(s.type==='autoconsumo'||s.type==='assaggi'))hasAutoThisWeek=true;});
+    Object.values(_db.production).forEach(l=>{if(l.orgConf&&l.orgConf.date>=wA)hasOrgThisWeek=true;});
+    if(hasAutoThisWeek&&!hasOrgThisWeek) issues.push({level:'w',msg:'📋 Reminder: inserire conformità ORGANOLETTICA questa settimana (ci sono uscite autoconsumo/assaggi)'});
+    // Milk analysis reminder (every 2 weeks)
+    const labList=Object.values(_db.milkAnalysis||{}).filter(a=>a.type==='lab').sort((a,b)=>b.date.localeCompare(a.date));
+    if(labList.length>0){
+      const daysSinceLab=daysSince(labList[0].date);
+      if(daysSinceLab>=14) issues.push({level:'w',msg:`🔬 Reminder: ultima analisi latte LAB il ${fmtDate(labList[0].date)} (${daysSinceLab} giorni fa). Periodicità consigliata: 2 settimane.`});
+    } else {
+      issues.push({level:'i',msg:'🔬 Nessuna analisi latte di laboratorio registrata. Aggiungila nel modulo Analisi Latte.'});
+    }
+    return issues;
+  },
+  renderDash(){
+    const issues=Alerts.check();
+    const el=document.getElementById('dash-alerts');if(!el)return;
+    if(!issues.length){el.innerHTML='<div class="alert alert-s">✅ Nessun avviso critico.</div>';return;}
+    el.innerHTML=issues.map(i=>`<div class="alert alert-${i.level==='e'?'e':i.level==='i'?'i':'w'}">${i.msg}</div>`).join('');
+  },
+  renderConf(){
+    const issues=Alerts.check().filter(i=>i.msg.includes('FISIC')||i.msg.includes('ORGANO'));
+    const el=document.getElementById('conf-alerts');if(!el)return;
+    el.innerHTML=issues.map(i=>`<div class="alert alert-${i.level==='e'?'e':'w'}">${i.msg}</div>`).join('');
+  },
+  renderAnalisi(){
+    const issues=Alerts.check().filter(i=>i.msg.includes('analisi latte')||i.msg.includes('Analisi latte')||i.msg.includes('LAB'));
+    const el=document.getElementById('analisi-alerts');if(!el)return;
+    el.innerHTML=issues.map(i=>`<div class="alert alert-${i.level==='i'?'i':'w'}">${i.msg}</div>`).join('');
+  }
+};
+
+/* ── DASHBOARD ── */
+const Dash = {
+  render(){
+    Alerts.renderDash();
+    const lots=Object.entries(_db.production);
+    const totRem=lots.reduce((s,[id])=>s+Mag.remaining(id),0);
+    const vendDOP=lots.filter(([id])=>Mag.dopReady(id)).reduce((s,[id])=>s+Mag.remaining(id),0);
+    const fresco=lots.filter(([id])=>{const d=daysSince(id);return d>=5&&d<=9&&Mag.remaining(id)>0}).reduce((s,[id])=>s+Mag.remaining(id),0);
+    const affinato=lots.filter(([id])=>daysSince(id)>=10&&Mag.remaining(id)>0).reduce((s,[id])=>s+Mag.remaining(id),0);
+    const nonDop=lots.filter(([id])=>daysSince(id)<5&&Mag.remaining(id)>0).reduce((s,[id])=>s+Mag.remaining(id),0);
+    const bolFree=Object.values(_db.bollini||{}).filter(b=>!b.used).length;
+    const bolTotal=Object.values(_db.bollini||{}).length;
+    document.getElementById('dash-stats').innerHTML=`
+      <div class="stat"><div class="stat-v">${totRem}</div><div class="stat-l">Forme totali</div></div>
+      <div class="stat teal"><div class="stat-v">${vendDOP}</div><div class="stat-l">Vendibili DOP oggi</div></div>
+      <div class="stat blue"><div class="stat-v">${fresco}</div><div class="stat-l">Forme fresche</div></div>
+      <div class="stat amber"><div class="stat-v">${affinato}</div><div class="stat-l">Forme affinate</div></div>
+      <div class="stat red"><div class="stat-v">${nonDop}</div><div class="stat-l">Non DOP (troppo fresche)</div></div>
+      <div class="stat purple"><div class="stat-v">${bolFree}</div><div class="stat-l">Bollini disponibili</div></div>
+    `;
+    // Active lots
+    const active=lots.filter(([id])=>Mag.remaining(id)>0).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,8);
+    const el=document.getElementById('dash-lots');
+    if(!active.length){el.innerHTML='<div class="empty"><div class="ei">📭</div><p>Magazzino vuoto</p></div>';return;}
+    el.innerHTML=`<div class="tw"><table><thead><tr><th>Lotto</th><th>Gg</th><th>Forme</th><th>Rim.</th><th>Stato</th><th>DOP?</th></tr></thead><tbody>
+      ${active.map(([id,lot])=>{
+        const rem=Mag.remaining(id),days=daysSince(id);
+        const stato=days<5?'Non vendibile DOP':days<=9?'DOP Fresco':'DOP Affinato';
+        const statoCls=days<5?'bdg-err':days<=9?'bdg-blue':'bdg-dop';
+        const dop=Mag.dopReady(id);
+        return`<tr><td><b>${isoToLot(id)}</b></td><td>${days}</td><td>${lot.forms}</td><td><b>${rem}</b></td><td><span class="bdg ${statoCls}">${stato}</span></td><td>${dop?'<span class="bdg bdg-ok">✅</span>':'<span class="bdg bdg-err">❌</span>'}</td></tr>`;
+      }).join('')}
+    </tbody></table></div>`;
+    // Last lot
+    const lastLot=lots.sort((a,b)=>b[0].localeCompare(a[0]))[0];
+    const ll=document.getElementById('dash-last-lot');
+    if(lastLot){const[id,l]=lastLot;ll.innerHTML=`<p><b>${isoToLot(id)}</b></p><p class="mini">${l.liters}L – ${l.forms} forme – Giorno ${daysSince(id)}</p><p class="mini">Rimanenza: ${Mag.remaining(id)} forme</p>`;}
+    else if(ll) ll.innerHTML='<p class="mini">Nessun lotto</p>';
+    // Last DDT
+    const ddtList=Object.values(_db.ddt||{}).sort((a,b)=>b.date.localeCompare(a.date));
+    const ld=document.getElementById('dash-last-ddt');
+    if(ld){
+      if(ddtList.length){const d=ddtList[0];ld.innerHTML=`<p><b>${d.id}</b> – ${fmtDate(d.date)}</p><p class="mini">${Clients.getName(d.clientId)}</p><p class="mini">Totale: ${fmtEuro(d.totaleDocumento||d.totalAmount||d.totaleDocumento||d.totalAmount)}</p>`;}
+      else ld.innerHTML='<p class="mini">Nessun DDT</p>';
+    }
+    // Bollini
+    const bc=document.getElementById('dash-bollini-count');
+    const bp=document.getElementById('dash-bollini-preview');
+    if(bc) bc.textContent=`${bolFree}/${bolTotal} disponibili`;
+    if(bp){
+      const next5=Object.entries(_db.bollini||{}).filter(([,b])=>!b.used).sort((a,b)=>a[0].localeCompare(b[0])).slice(0,5);
+      bp.innerHTML=next5.length?`<div class="pill-row">${next5.map(([id])=>`<span class="bdg bdg-dop">${id}</span>`).join('')}${bolFree>5?`<span class="bdg bdg-gray">+${bolFree-5} altri</span>`:''}</div>`:'<p class="mini">Nessun bollino. Vai in Bollini → Importa range.</p>';
+    }
+  }
+};
+
+/* ── PRODUCTION ── */
+const Prod = {
+  curYear: YEAR, curMonth: new Date().getMonth(),
+  prevMonth(){ Prod.curMonth--; if(Prod.curMonth<0){Prod.curMonth=11;Prod.curYear--;} Prod.render(); },
+  nextMonth(){ Prod.curMonth++; if(Prod.curMonth>11){Prod.curMonth=0;Prod.curYear++;} Prod.render(); },
+  getLots(){
+    const y=Prod.curYear, m=Prod.curMonth;
+    return Object.entries(_db.production)
+      .filter(([id])=>{ const d=new Date(id); return d.getFullYear()===y && d.getMonth()===m; })
+      .sort((a,b)=>a[0].localeCompare(b[0]));
+  },
+  render(){
+    document.getElementById('prod-month-label').textContent=`${MONTHS_IT[Prod.curMonth]} ${Prod.curYear}`;
+    const lots=Prod.getLots();
+    // Stats
+    const totalL=lots.reduce((s,[,l])=>s+Number(l.liters||0),0);
+    const totalF=lots.reduce((s,[,l])=>s+Number(l.forms||0),0);
+    const totalKg=(totalF*0.31).toFixed(2);
+    document.getElementById('prod-stats').innerHTML=`
+      <div class="stat"><div class="stat-v">${lots.length}</div><div class="stat-l">Lotti</div></div>
+      <div class="stat amber"><div class="stat-v">${totalL.toFixed(0)}</div><div class="stat-l">Litri latte DOP</div></div>
+      <div class="stat teal"><div class="stat-v">${totalF}</div><div class="stat-l">Forme prodotte</div></div>
+      <div class="stat"><div class="stat-v">${totalKg}</div><div class="stat-l">Kg prodotti</div></div>
+    `;
+    if(!lots.length){
+      document.getElementById('prod-table-wrap').innerHTML='<div class="empty"><div class="ei">🏭</div><p>Nessun lotto in questo mese. Usa "+" per aggiungerne uno.</p></div>';
+      return;
+    }
+    document.getElementById('prod-table-wrap').innerHTML=`<table>
+      <thead><tr>
+        <th>Lotto</th><th>Litri</th><th>Forme</th><th>Siero</th><th>Caglio</th><th>Coag.</th><th>Stampi</th>
+        <th>Conf.Fis</th><th>Conf.Org</th><th>Conf.Chim</th><th>Kg</th><th>Azioni</th>
+      </tr></thead>
+      <tbody>${lots.map(([id,l])=>Prod.renderRow(id,l)).join('')}</tbody>
+      <tfoot class="tfoot"><tr>
+        <td colspan="2"><b>TOTALI MESE</b></td>
+        <td>${totalL.toFixed(0)} L</td><td>${totalF}</td>
+        <td colspan="7"></td><td>${totalKg} kg</td><td></td>
+      </tr></tfoot>
+    </table>`;
+  },
+  renderRow(id,l){
+    const days=daysSince(id);
+    const ph=Prod.confBadge(l.physConf,'fis',id,days);
+    const or=Prod.confBadge(l.orgConf,'org',id,days);
+    const ch=Prod.confBadge(l.chemConf,'chim',id,days);
+    return `<tr>
+      <td><b>${isoToLot(id)}</b><br><span class="mini">g.${days}</span></td>
+      <td>${l.liters||'—'}</td>
+      <td>${l.forms||'—'}</td>
+      <td>${l.sieroInnesto?'✅':'—'}</td>
+      <td><span class="mini">${l.caglioLot||'—'}</span></td>
+      <td><span class="mini">${l.coagHours||'—'}</span></td>
+      <td><span class="mini">${l.stampiRest||'—'}</span></td>
+      <td>${ph}</td><td>${or}</td><td>${ch}</td>
+      <td>${((l.forms||0)*0.31).toFixed(2)}</td>
+      <td>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-xs" onclick="Prod.openEdit('${id}')">✏</button>
+          <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','fis')">Fis</button>
+          <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','org')">Org</button>
+          <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','chim')">Chim</button>
+          <button class="btn btn-d btn-xs" onclick="Prod.deleteLot('${id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  },
+  confBadge(conf,type,id,days){
+    if(!conf){
+      if(type==='fis'){
+        if(days<4) return `<span class="conf-na">—</span>`;
+        if(days===4) return `<span class="conf-pend">⏳ Domani</span>`;
+        if(days===5) return `<span class="conf-pend">⚠ Oggi!</span>`;
+        return `<span class="conf-nc">❌ Scaduta</span>`;
+      }
+      return `<span class="conf-na">—</span>`;
+    }
+    const cls=conf.result==='C'?'conf-ok':'conf-nc';
+    const ic=conf.result==='C'?'✅':'❌';
+    return `<span class="${cls}" title="${conf.notes||''}" onclick="Prod.openConf('${id}','${type}')" style="cursor:pointer">${ic} ${conf.result}<br><span class="mini">${fmtDate(conf.date)}</span></span>`;
+  },
+  openAdd(){
+    document.getElementById('m-prod-title').textContent='Nuovo lotto produzione';
+    document.getElementById('mp-edit-id').value='';
+    document.getElementById('mp-date').value=today();
+    document.getElementById('mp-liters').value='';
+    document.getElementById('mp-forms').value='';
+    document.getElementById('mp-coag').value='';
+    document.getElementById('mp-caglio').value='';
+    document.getElementById('mp-stampi').value='';
+    document.getElementById('mp-siero').checked=false;
+    document.getElementById('mp-note').value='';
+    openModal('m-prod');
+  },
+  openEdit(id){
+    const l=_db.production[id];
+    if(!l) return;
+    confirm2(`Modificare i dati del lotto ${isoToLot(id)}? Le conformità non verranno toccate.`,()=>{
+      document.getElementById('m-prod-title').textContent=`Modifica lotto ${isoToLot(id)}`;
+      document.getElementById('mp-edit-id').value=id;
+      document.getElementById('mp-date').value=id;
+      document.getElementById('mp-liters').value=l.liters||'';
+      document.getElementById('mp-forms').value=l.forms||'';
+      document.getElementById('mp-coag').value=l.coagHours||'';
+      document.getElementById('mp-caglio').value=l.caglioLot||'';
+      document.getElementById('mp-stampi').value=l.stampiRest||'';
+      document.getElementById('mp-siero').checked=!!l.sieroInnesto;
+      document.getElementById('mp-note').value=l.note||'';
+      openModal('m-prod');
+    });
+  },
+  saveLot(){
+    const editId=document.getElementById('mp-edit-id').value;
+    const date=document.getElementById('mp-date').value;
+    const liters=parseFloat(document.getElementById('mp-liters').value);
+    const forms=parseInt(document.getElementById('mp-forms').value);
+    if(!date){toast('Inserisci la data del lotto','w');return;}
+    if(isNaN(liters)||liters<=0){toast('Inserisci i litri di latte','w');return;}
+    if(isNaN(forms)||forms<1){toast('Inserisci il numero di forme','w');return;}
+    if(!editId && _db.production[date]){toast('Esiste già un lotto per questa data','w');return;}
+    const existing=editId?_db.production[editId]:{};
+    _db.production[date]={
+      ...existing,
+      liters, forms,
+      sieroInnesto: document.getElementById('mp-siero').checked,
+      coagHours: document.getElementById('mp-coag').value,
+      caglioLot: document.getElementById('mp-caglio').value,
+      stampiRest: document.getElementById('mp-stampi').value,
+      note: document.getElementById('mp-note').value,
+      createdAt: existing.createdAt||Date.now()
+    };
+    if(editId && editId!==date){ delete _db.production[editId]; }
+    Store.saveNow();
+    closeModal('m-prod');
+    Prod.render();
+    Dash.render();
+    toast('Lotto salvato','s');
+  },
+  deleteLot(id){
+    confirm2(`Eliminare il lotto ${isoToLot(id)} e tutte le sue uscite?`,()=>{
+      delete _db.production[id];
+      delete _db.sales[id];
+      Store.saveNow();
+      Prod.render();
+      toast('Lotto eliminato','w');
+    });
+  },
+  openConf(id,type){
+    const lot=_db.production[id];
+    if(!lot){ toast('Lotto non trovato','e'); return; }
+    const days=daysSince(id);
+    const typeNames={fis:'Fisiche',org:'Organolettiche',chim:'Chimiche'};
+    // Check conditions for organoleptic
+    if(type==='org'){
+      const hasSales=(_db.sales[id]||[]).some(s=>s.type==='autoconsumo');
+      if(!hasSales){
+        toast('Le conformità organolettiche si inseriscono solo se c\'è almeno un\'uscita come autoconsumo/assaggi','w');
+        return;
+      }
+    }
+    document.getElementById('m-conf-title').textContent=`Conformità ${typeNames[type]} – Lotto ${isoToLot(id)}`;
+    document.getElementById('mc-lot-id').value=id;
+    document.getElementById('mc-type').value=type;
+    const confKey={fis:'physConf',org:'orgConf',chim:'chemConf'}[type];
+    const existing=lot[confKey];
+    document.getElementById('mc-date').value=existing?existing.date:today();
+    document.getElementById('mc-result').value=existing?existing.result:'';
+    document.getElementById('mc-note').value=existing?existing.notes:'';
+    let infoMsg='';
+    if(type==='fis') infoMsg=`Lotto del ${isoToLot(id)} – Giorno ${days}. Le conformità fisiche vanno inserite tra il 4° e il 5° giorno.`;
+    else if(type==='org') infoMsg=`Le conformità organolettiche sono facoltative. Inseribile solo se ci sono uscite autoconsumo/assaggi per questo lotto.`;
+    else infoMsg=`Le analisi chimiche vengono eseguite 2 volte l'anno. Inserisci i risultati quando disponibili.`;
+    document.getElementById('mc-info').textContent=infoMsg;
+    openModal('m-conf');
+  },
+  saveConf(){
+    const id=document.getElementById('mc-lot-id').value;
+    const type=document.getElementById('mc-type').value;
+    const date=document.getElementById('mc-date').value;
+    const result=document.getElementById('mc-result').value;
+    const notes=document.getElementById('mc-note').value;
+    if(!date||!result){toast('Compila data ed esito','w');return;}
+    const lot=_db.production[id];
+    if(!lot){toast('Lotto non trovato','e');return;}
+    const confKey={fis:'physConf',org:'orgConf',chim:'chemConf'}[type];
+    lot[confKey]={date,result,notes};
+    Store.saveNow();
+    closeModal('m-conf');
+    Prod.render();
+    toast('Conformità salvata','s');
+  }
+};
+
+/* ── MAGAZZINO ── */
+const Mag = {
+  position(days){ if(days<=2) return 'Sui tavoli'; if(days<=5) return 'In asciugatura'; return 'Nella cella'; },
+  dicitura(days){ if(days<=4) return 'Freschissima'; if(days<=9) return 'Fresca'; return 'Affinata'; },
+  dopDicitura(days){ if(days<=9) return 'Roccaverano DOP fresco'; return 'Roccaverano DOP affinato'; },
+  dopReady(id){
+    const lot=_db.production[id];
+    if(!lot) return false;
+    const days=daysSince(id);
+    if(days<5) return false;
+    // Physical conformity must be done and C
+    if(!lot.physConf||lot.physConf.result!=='C') return false;
+    // Chemical conformity: if done and NC, not sellable
+    if(lot.chemConf&&lot.chemConf.result==='NC') return false;
+    return true;
+  },
+  remaining(id){
+    const lot=_db.production[id];
+    if(!lot) return 0;
+    const total=Number(lot.forms||0);
+    const sold=(_db.sales[id]||[]).reduce((s,x)=>s+Number(x.qty||0),0);
+    return Math.max(0, total-sold);
+  },
+  render(){
+    const all=Object.entries(_db.production).filter(([id])=>Mag.remaining(id)>0);
+    const groups={tavoli:[],asciugatura:[],cella:[]};
+    all.forEach(([id,lot])=>{
+      const days=daysSince(id);
+      const key=days<=2?'tavoli':days<=5?'asciugatura':'cella';
+      groups[key].push({id,lot,days,rem:Mag.remaining(id)});
+    });
+    let totalRem=all.reduce((s,[id])=>s+Mag.remaining(id),0);
+    document.getElementById('mag-stats').innerHTML=`
+      <div class="stat"><div class="stat-v">${groups.tavoli.length}</div><div class="stat-l">Lotti sui tavoli</div></div>
+      <div class="stat amber"><div class="stat-v">${groups.asciugatura.length}</div><div class="stat-l">In asciugatura</div></div>
+      <div class="stat teal"><div class="stat-v">${groups.cella.length}</div><div class="stat-l">Nella cella</div></div>
+      <div class="stat"><div class="stat-v">${totalRem}</div><div class="stat-l">Totale forme</div></div>
+    `;
+    const labels={tavoli:'🪵 Sui Tavoli (gg. 0-2)',asciugatura:'💨 In Asciugatura (gg. 3-5)',cella:'🧊 Nella Cella (gg. 6+)'};
+    let html='';
+    ['tavoli','asciugatura','cella'].forEach(pos=>{
+      const items=groups[pos];
+      html+=`<div class="card"><div class="card-hd"><div class="card-title">${labels[pos]}</div></div>`;
+      if(!items.length){ html+='<p class="mini">Nessun lotto in questa posizione</p></div>'; return; }
+      html+=`<div class="wh-grid">`;
+      items.forEach(({id,lot,days,rem})=>{
+        const dic=Mag.dicitura(days);
+        const dop=Mag.dopReady(id);
+        html+=`<div class="wh-card ${pos}">
+          <div style="font-weight:700;font-size:.9rem">${isoToLot(id)}</div>
+          <div class="mini">Giorno ${days}</div>
+          <div style="margin:6px 0"><span class="bdg bdg-amber">${dic}</span> <span class="bdg bdg-gray">${rem} forme</span></div>
+          <div>${dop?'<span class="bdg bdg-ok">✅ DOP pronta</span>':'<span class="bdg bdg-err">❌ Non DOP</span>'}</div>
+          ${dop?`<div class="mini" style="margin-top:4px">${Mag.dopDicitura(days)}</div>`:''}
+        </div>`;
+      });
+      html+=`</div></div>`;
+    });
+    document.getElementById('mag-sections').innerHTML=html||'<div class="empty"><div class="ei">📦</div><p>Magazzino vuoto</p></div>';
+  }
+};
+
+/* ── SALES ── */
+const Sales = {
+  curYear: YEAR, curMonth: new Date().getMonth(),
+  prevMonth(){ Sales.curMonth--; if(Sales.curMonth<0){Sales.curMonth=11;Sales.curYear--;} Sales.render(); },
+  nextMonth(){ Sales.curMonth++; if(Sales.curMonth>11){Sales.curMonth=0;Sales.curYear++;} Sales.render(); },
+  getLotIds(){
+    const y=Sales.curYear, m=Sales.curMonth;
+    // Show lots that have activity OR production in this month
+    const set=new Set();
+    Object.keys(_db.production).forEach(id=>{const d=new Date(id);if(d.getFullYear()===y&&d.getMonth()===m)set.add(id);});
+    Object.entries(_db.sales||{}).forEach(([lid,slist])=>{
+      slist.forEach(s=>{ if(s.date){ const d=new Date(s.date);if(d.getFullYear()===y&&d.getMonth()===m)set.add(lid); } });
+    });
+    return [...set].sort((a,b)=>b.localeCompare(a));
+  },
+  render(){
+    document.getElementById('sales-month-label').textContent=`${MONTHS_IT[Sales.curMonth]} ${Sales.curYear}`;
+    const ids=Sales.getLotIds();
+    let totDOP=0,totND=0,totAuto=0,totRem=0;
+    ids.forEach(id=>{
+      const slist=_db.sales[id]||[];
+      totDOP+=slist.filter(s=>s.type==='dop').reduce((s,x)=>s+Number(x.qty||0),0);
+      totND+=slist.filter(s=>s.type==='nondop').reduce((s,x)=>s+Number(x.qty||0),0);
+      totAuto+=slist.filter(s=>s.type==='autoconsumo').reduce((s,x)=>s+Number(x.qty||0),0);
+      totRem+=Mag.remaining(id);
+    });
+    document.getElementById('sales-stats').innerHTML=`
+      <div class="stat"><div class="stat-v">${totDOP}</div><div class="stat-l">Forme DOP vendute</div></div>
+      <div class="stat amber"><div class="stat-v">${(totDOP*0.28).toFixed(2)}</div><div class="stat-l">Kg DOP</div></div>
+      <div class="stat teal"><div class="stat-v">${totND}</div><div class="stat-l">Forme non DOP</div></div>
+      <div class="stat red"><div class="stat-v">${totRem}</div><div class="stat-l">Rimanenza totale</div></div>
+    `;
+    if(!ids.length){
+      document.getElementById('sales-lots').innerHTML='<div class="empty"><div class="ei">💰</div><p>Nessuna produzione o vendita in questo mese</p></div>';
+      return;
+    }
+    document.getElementById('sales-lots').innerHTML=ids.map(id=>Sales.renderLotBlock(id)).join('');
+  },
+  renderLotBlock(id){
+    const lot=_db.production[id];
+    const forms=lot?Number(lot.forms||0):0;
+    const slist=(_db.sales[id]||[]).sort((a,b)=>a.date.localeCompare(b.date));
+    const rem=Mag.remaining(id);
+    const dopSold=slist.filter(s=>s.type==='dop').reduce((s,x)=>s+Number(x.qty||0),0);
+    const ndSold=slist.filter(s=>s.type==='nondop').reduce((s,x)=>s+Number(x.qty||0),0);
+    const autoSold=slist.filter(s=>s.type==='autoconsumo').reduce((s,x)=>s+Number(x.qty||0),0);
+    const pct=forms>0?Math.round(((forms-rem)/forms)*100):0;
+    return `<div class="lot-block">
+      <div class="lot-block-hd" onclick="Sales.toggleBlock('${id}')">
+        <div>
+          <span style="font-weight:700">Lotto ${isoToLot(id)}</span>
+          <span class="bdg bdg-gray" style="margin-left:6px">g.${daysSince(id)}</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="bdg bdg-dop">DOP: ${dopSold}</span>
+          <span class="bdg bdg-nd">Non DOP: ${ndSold}</span>
+          <span class="bdg bdg-auto">Auto: ${autoSold}</span>
+          <span class="bdg bdg-ok">Rim: ${rem}/${forms}</span>
+          <button class="btn btn-a btn-xs" onclick="event.stopPropagation();Sales.openAdd('${id}')">+ Uscita</button>
+        </div>
+      </div>
+      <div class="lot-block-bd" id="lb-${id}">
+        <div class="progress-b"><div class="progress-f" style="width:${pct}%"></div></div>
+        <p class="mini" style="margin:4px 0 10px">Venduto/uscito: ${forms-rem}/${forms} forme (${pct}%)</p>
+        ${slist.length?`<div class="tw"><table>
+          <thead><tr><th>Data</th><th>Tipo</th><th>Qty</th><th>Bollino/i</th><th>Metodo</th><th>Rif.</th><th>Note</th><th></th></tr></thead>
+          <tbody>${slist.map(s=>Sales.renderSaleRow(id,s)).join('')}</tbody>
+        </table></div>`:'<p class="mini">Nessuna uscita registrata per questo lotto.</p>'}
+      </div>
+    </div>`;
+  },
+  renderSaleRow(lid,s){
+    const typeMap={dop:'<span class="bdg bdg-dop">DOP</span>',nondop:'<span class="bdg bdg-nd">Non DOP</span>',autoconsumo:'<span class="bdg bdg-auto">Auto</span>'};
+    const bollini=(s.bollini||[]).map(b=>`<span class="bdg bdg-amber">${b}</span>`).join(' ');
+    const rif=s.ddtId||s.ndRef||s.scontrinoDate||'—';
+    return `<tr>
+      <td>${fmtDate(s.date)}</td>
+      <td>${typeMap[s.type]||s.type}</td>
+      <td><b>${s.qty}</b></td>
+      <td>${bollini||'—'}</td>
+      <td><span class="mini">${s.method||'—'}</span></td>
+      <td><span class="mini">${rif}</span></td>
+      <td><span class="mini">${s.note||''}</span></td>
+      <td>
+        <button class="btn btn-d btn-xs" onclick="Sales.deleteSale('${lid}','${s.id}')">🗑</button>
+      </td>
+    </tr>`;
+  },
+  toggleBlock(id){
+    const bd=document.getElementById(`lb-${id}`);
+    if(bd) bd.classList.toggle('open');
+  },
+  openAdd(lotId){
+    const lot=_db.production[lotId];
+    if(!lot){toast('Lotto non trovato','e');return;}
+    const days=daysSince(lotId);
+    document.getElementById('m-sale-title').textContent=`Uscita – Lotto ${isoToLot(lotId)}`;
+    document.getElementById('ms-lot-id').value=lotId;
+    document.getElementById('ms-edit-id').value='';
+    document.getElementById('ms-date').value=today();
+    document.getElementById('ms-type').value='';
+    document.getElementById('ms-qty').value='1';
+    document.getElementById('ms-note').value='';
+    document.getElementById('ms-dop-fields').style.display='none';
+    document.getElementById('ms-nondop-fields').style.display='none';
+    document.getElementById('ms-dop-warn').style.display='none';
+    document.getElementById('ms-bollini-tags').innerHTML='';
+    document.getElementById('ms-bollini-sug').innerHTML='';
+    document.getElementById('ms-bol-input').value='';
+    document.getElementById('ms-method').value='';
+    document.getElementById('ms-ddt-fields').style.display='none';
+    document.getElementById('ms-scontrino-fields').style.display='none';
+    document.getElementById('ms-nd-method').value='';
+    document.getElementById('ms-nd-ref').value='';
+    // Lot info
+    const rem=Mag.remaining(lotId);
+    document.getElementById('ms-lot-info').textContent=`Lotto ${isoToLot(lotId)} – Giorno ${days} – ${Mag.dicitura(days)} – Rimanenza: ${rem} forme`;
+    // Populate DDT select
+    const ddtSel=document.getElementById('ms-ddt-id');
+    ddtSel.innerHTML='<option value="">-- Seleziona DDT --</option>';
+    Object.entries(_db.ddt||{}).forEach(([k,d])=>{
+      ddtSel.innerHTML+=`<option value="${k}">${k} – ${fmtDate(d.date)} – ${Clients.getName(d.clientId)}</option>`;
+    });
+    openModal('m-sale');
+    Sales.updateBollinoSuggestions();
+  },
+  onTypeChange(){
+    const t=document.getElementById('ms-type').value;
+    document.getElementById('ms-dop-fields').style.display=t==='dop'?'block':'none';
+    document.getElementById('ms-nondop-fields').style.display=t==='nondop'?'block':'none';
+    if(t==='dop'){
+      const id=document.getElementById('ms-lot-id').value;
+      const dop=Mag.dopReady(id);
+      const days=daysSince(id);
+      if(!dop){
+        const w=document.getElementById('ms-dop-warn');
+        w.style.display='block';
+        const lot=_db.production[id];
+        let reason='';
+        if(days<5) reason=`Lotto troppo fresco (giorno ${days}, minimo 5)`;
+        else if(!lot||!lot.physConf) reason='Conformità fisiche non ancora inserite';
+        else if(lot.physConf.result==='NC') reason='Conformità fisiche NON CONFORMI';
+        else if(lot.chemConf&&lot.chemConf.result==='NC') reason='Analisi chimiche NON CONFORMI';
+        w.textContent=`⚠ Attenzione: questo lotto non è ancora vendibile come DOP. ${reason}`;
+      } else {
+        document.getElementById('ms-dop-warn').style.display='none';
+      }
+    }
+  },
+  onMethodChange(){
+    const m=document.getElementById('ms-method').value;
+    document.getElementById('ms-ddt-fields').style.display=m==='ddt'?'block':'none';
+    document.getElementById('ms-scontrino-fields').style.display=m==='scontrino'?'block':'none';
+  },
+  updateBollinoSuggestions(){
+    const free=Object.entries(_db.bollini||{}).filter(([,b])=>!b.used).sort((a,b)=>a[0].localeCompare(b[0])).slice(0,10);
+    const sug=document.getElementById('ms-bollini-sug');
+    if(!sug) return;
+    if(!free.length){ sug.innerHTML='<span class="mini">Nessun bollino disponibile</span>'; return; }
+    sug.innerHTML=free.map(([id])=>`<button class="bollino-sug" onclick="Sales.addBollino('${id}')">${id}</button>`).join('');
+  },
+  addBollinoManual(){
+    const inp=document.getElementById('ms-bol-input');
+    const val=inp.value.trim();
+    if(val.length!==4||isNaN(val)){toast('Inserisci esattamente 4 cifre','w');return;}
+    // Find bollino with this number
+    const matches=Object.keys(_db.bollini||{}).filter(id=>id.startsWith('MB'+val));
+    if(!matches.length){
+      // Check if it might be valid – add with current year
+      const fullId=fmtBollino(parseInt(val),String(YEAR).slice(-2));
+      Sales.addBollino(fullId,true);
+    } else if(matches.length===1){
+      Sales.addBollino(matches[0]);
+    } else {
+      // Multiple matches, ask user
+      const msg=`Trovati più bollini con numero ${val}: ${matches.join(', ')}. Quale vuoi usare?`;
+      // Simple select
+      const choice=matches.find(m=>confirm(`Usare ${m}?`));
+      if(choice) Sales.addBollino(choice);
+    }
+    inp.value='';
+  },
+  addBollino(fullId, force=false){
+    const existing=_db.bollini&&_db.bollini[fullId];
+    if(existing&&existing.used&&!force){toast(`Bollino ${fullId} già utilizzato!`,'e');return;}
+    // Check not already added in this sale
+    const tags=document.getElementById('ms-bollini-tags');
+    const current=Array.from(tags.querySelectorAll('[data-bol]')).map(el=>el.dataset.bol);
+    if(current.includes(fullId)){toast('Bollino già aggiunto','w');return;}
+    const tag=document.createElement('span');
+    tag.className='tag';
+    tag.dataset.bol=fullId;
+    tag.innerHTML=`${fullId}<button class="tag-x" onclick="this.parentElement.remove()">×</button>`;
+    tags.appendChild(tag);
+    Sales.updateBollinoSuggestions();
+  },
+  saveSale(){
+    const lotId=document.getElementById('ms-lot-id').value;
+    const date=document.getElementById('ms-date').value;
+    const type=document.getElementById('ms-type').value;
+    const qty=parseInt(document.getElementById('ms-qty').value);
+    if(!date||!type){toast('Compila data e tipologia','w');return;}
+    if(isNaN(qty)||qty<1){toast('Inserisci un numero di forme valido','w');return;}
+    const rem=Mag.remaining(lotId);
+    if(qty>rem){toast(`Forme insufficienti: rimanenza è ${rem}`,'e');return;}
+    const sale={
+      id:uuid(), date, type, qty,
+      note:document.getElementById('ms-note').value
+    };
+    if(type==='dop'){
+      const tags=Array.from(document.getElementById('ms-bollini-tags').querySelectorAll('[data-bol]')).map(el=>el.dataset.bol);
+      if(tags.length!==qty){toast(`Devi assegnare esattamente ${qty} bollino/i (uno per forma)`,'w');return;}
+      // Mark bollini as used
+      tags.forEach(b=>{
+        if(!_db.bollini[b]) _db.bollini[b]={id:b,used:false};
+        _db.bollini[b].used=true;
+        _db.bollini[b].usedDate=date;
+        _db.bollini[b].lotId=lotId;
+        _db.bollini[b].saleId=sale.id;
+      });
+      sale.bollini=tags;
+      sale.method=document.getElementById('ms-method').value;
+      sale.ddtId=document.getElementById('ms-ddt-id').value||null;
+      sale.scontrinoDate=document.getElementById('ms-scontrino-fields').style.display!=='none'?document.getElementById('ms-scontrino-date').value:null;
+    } else if(type==='nondop'){
+      sale.method=document.getElementById('ms-nd-method').value;
+      sale.ndRef=document.getElementById('ms-nd-ref').value;
+    }
+    if(!_db.sales[lotId]) _db.sales[lotId]=[];
+    _db.sales[lotId].push(sale);
+    Store.saveNow();
+    closeModal('m-sale');
+    Sales.render();
+    Dash.render();
+    toast('Uscita registrata','s');
+  },
+  deleteSale(lotId, saleId){
+    confirm2('Eliminare questa uscita? I bollini associati verranno liberati.',()=>{
+      const slist=_db.sales[lotId]||[];
+      const sale=slist.find(s=>s.id===saleId);
+      if(sale&&sale.bollini){
+        sale.bollini.forEach(b=>{ if(_db.bollini[b]){ _db.bollini[b].used=false; _db.bollini[b].usedDate=null; _db.bollini[b].lotId=null; _db.bollini[b].saleId=null; } });
+      }
+      _db.sales[lotId]=slist.filter(s=>s.id!==saleId);
+      Store.saveNow();
+      Sales.render();
+      toast('Uscita eliminata','w');
+    });
+  }
+};
+
+/* ── BOLLINI ── */
+const Bol = {
+  render(){
+    const all=Object.values(_db.bollini||{});
+    const free=all.filter(b=>!b.used).length;
+    document.getElementById('bol-stats').innerHTML=`
+      <div class="stat"><div class="stat-v">${all.length}</div><div class="stat-l">Totale bollini</div></div>
+      <div class="stat teal"><div class="stat-v">${free}</div><div class="stat-l">Disponibili</div></div>
+      <div class="stat amber"><div class="stat-v">${all.length-free}</div><div class="stat-l">Utilizzati</div></div>
+    `;
+    const sorted=Object.entries(_db.bollini||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+    if(!sorted.length){
+      document.getElementById('bol-list').innerHTML='<div class="empty"><div class="ei">🏷</div><p>Nessun bollino caricato. Usa "Importa range" per caricarli.</p></div>';
+      return;
+    }
+    // Group by year
+    const byYear={};
+    sorted.forEach(([id,b])=>{ const y=id.slice(-2); if(!byYear[y]) byYear[y]=[]; byYear[y].push([id,b]); });
+    let html='';
+    Object.entries(byYear).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([yr,items])=>{
+      const freeY=items.filter(([,b])=>!b.used).length;
+      html+=`<div class="divider-label">Anno /20${yr} – ${freeY}/${items.length} disponibili</div>`;
+      html+=`<div class="tw"><table><thead><tr><th>Bollino</th><th>Stato</th><th>Lotto usato</th><th>Data uso</th></tr></thead><tbody>`;
+      items.forEach(([id,b])=>{
+        html+=`<tr><td><b>${id}</b></td>
+          <td>${b.used?'<span class="bdg bdg-err">Usato</span>':'<span class="bdg bdg-ok">Disponibile</span>'}</td>
+          <td>${b.lotId?isoToLot(b.lotId):'—'}</td>
+          <td>${fmtDate(b.usedDate)}</td></tr>`;
+      });
+      html+=`</tbody></table></div>`;
+    });
+    document.getElementById('bol-list').innerHTML=html;
+  },
+  openImport(){
+    document.getElementById('mb-from').value='';
+    document.getElementById('mb-to').value='';
+    document.getElementById('mb-year').value=String(YEAR).slice(-2);
+    document.getElementById('mb-preview').textContent='';
+    openModal('m-bol');
+    ['mb-from','mb-to','mb-year'].forEach(id=>{
+      document.getElementById(id).addEventListener('input',Bol.updatePreview);
+    });
+  },
+  updatePreview(){
+    const from=parseInt(document.getElementById('mb-from').value)||0;
+    const to=parseInt(document.getElementById('mb-to').value)||0;
+    const yr=document.getElementById('mb-year').value;
+    if(from&&to&&yr&&to>=from){
+      document.getElementById('mb-preview').textContent=`Verranno importati ${to-from+1} bollini: MB${pad4(from)}/${yr} → MB${pad4(to)}/${yr}`;
+    }
+  },
+  importRange(){
+    const from=parseInt(document.getElementById('mb-from').value);
+    const to=parseInt(document.getElementById('mb-to').value);
+    const yr=document.getElementById('mb-year').value.trim();
+    if(!from||!to||!yr){toast('Compila tutti i campi','w');return;}
+    if(to<from){toast('Il numero finale deve essere ≥ quello iniziale','w');return;}
+    if(to-from>1000){toast('Puoi importare max 1000 bollini alla volta','w');return;}
+    if(!_db.bollini) _db.bollini={};
+    let added=0,skip=0;
+    for(let n=from;n<=to;n++){
+      const id=fmtBollino(n,yr);
+      if(_db.bollini[id]){ skip++; continue; }
+      _db.bollini[id]={id,num:pad4(n),year:yr,used:false,usedDate:null,lotId:null,saleId:null};
+      added++;
+    }
+    Store.saveNow();
+    closeModal('m-bol');
+    Bol.render();
+    toast(`${added} bollini importati${skip?`, ${skip} già presenti`:''}`, 's');
+  },
+  openSearch(){
+    document.getElementById('bs-q').value='';
+    document.getElementById('bs-result').innerHTML='';
+    openModal('m-bol-search');
+  },
+  doSearch(){
+    const q=document.getElementById('bs-q').value.trim();
+    if(q.length!==4||isNaN(q)){toast('Inserisci esattamente 4 cifre','w');return;}
+    const matches=Object.entries(_db.bollini||{}).filter(([id])=>id.startsWith('MB'+q));
+    if(!matches.length){document.getElementById('bs-result').innerHTML='<p class="mini">Nessun bollino trovato</p>';return;}
+    document.getElementById('bs-result').innerHTML=`<div class="tw"><table>
+      <thead><tr><th>Bollino</th><th>Stato</th><th>Lotto</th><th>Data uso</th></tr></thead>
+      <tbody>${matches.map(([id,b])=>`<tr>
+        <td><b>${id}</b></td>
+        <td>${b.used?'<span class="bdg bdg-err">Usato</span>':'<span class="bdg bdg-ok">Disponibile</span>'}</td>
+        <td>${b.lotId?isoToLot(b.lotId):'—'}</td>
+        <td>${fmtDate(b.usedDate)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+};
+
+/* ── DDT ── */
+const DDT = {
+  curYear:YEAR, curMonth:new Date().getMonth(),
+  prevMonth(){ DDT.curMonth--; if(DDT.curMonth<0){DDT.curMonth=11;DDT.curYear--;} DDT.render(); },
+  nextMonth(){ DDT.curMonth++; if(DDT.curMonth>11){DDT.curMonth=0;DDT.curYear++;} DDT.render(); },
+  render(){
+    document.getElementById('ddt-month-label').textContent=`${MONTHS_IT[DDT.curMonth]} ${DDT.curYear}`;
+    const y=DDT.curYear,m=DDT.curMonth;
+    const items=Object.entries(_db.ddt||{})
+      .filter(([,d])=>{ const dt=new Date(d.date); return dt.getFullYear()===y&&dt.getMonth()===m; })
+      .sort((a,b)=>b[1].date.localeCompare(a[1].date));
+    if(!items.length){document.getElementById('ddt-table').innerHTML='<div class="empty"><div class="ei">📄</div><p>Nessun DDT in questo mese</p></div>';return;}
+    document.getElementById('ddt-table').innerHTML=`<table>
+      <thead><tr><th>N° DDT</th><th>Data</th><th>Cliente</th><th>Righe</th><th>Totale</th><th>Azioni</th></tr></thead>
+      <tbody>${items.map(([k,d])=>`<tr>
+        <td><b>${k}</b></td>
+        <td>${fmtDate(d.date)}</td>
+        <td>${Clients.getName(d.clientId)}</td>
+        <td>${(d.rows||[]).length}</td>
+        <td>${fmtEuro(d.totaleDocumento||d.totalAmount||d.totaleDocumento||d.totalAmount)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost btn-xs" onclick="DDT.openEdit('${k}')">✏</button>
+          <button class="btn btn-p btn-xs" onclick="DDT.generatePDF('${k}')">📄 PDF</button>
+          <button class="btn btn-d btn-xs" onclick="DDT.deleteDDT('${k}')">🗑</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  },
+  nextNumber(){
+    const n=_db.settings.nextDDT||1;
+    const yr=String(YEAR).slice(-2);
+    return `${pad2(n)}C/${yr}`;
+  },
+  openNew(){
+    document.getElementById('m-ddt-title').textContent='Nuovo DDT';
+    document.getElementById('md-edit-id').value='';
+    document.getElementById('md-num').value=DDT.nextNumber();
+    document.getElementById('md-date').value=today();
+    document.getElementById('md-mytel').value=_db.settings.myPhone||_db.settings.azienda.telefono||'';
+    document.getElementById('md-causale').value='Cessione a titolo oneroso';
+    document.getElementById('md-total').value='';
+    document.getElementById('md-note').value='';
+    document.getElementById('md-client').value='';
+    document.getElementById('md-client-preview').style.display='none';
+    DDT.loadClients();
+    document.getElementById('md-rows').innerHTML='';
+    DDT.addRow();
+    openModal('m-ddt');
+  },
+  openEdit(id){
+    const d=_db.ddt[id];
+    if(!d) return;
+    confirm2(`Modificare il DDT ${id}?`,()=>{
+      document.getElementById('m-ddt-title').textContent=`Modifica DDT ${id}`;
+      document.getElementById('md-edit-id').value=id;
+      document.getElementById('md-num').value=id;
+      document.getElementById('md-date').value=d.date;
+      document.getElementById('md-mytel').value=d.myPhone||'';
+      document.getElementById('md-causale').value=d.causale||'';
+      document.getElementById('md-total').value=d.totaleDocumento||d.totalAmount||'';
+      document.getElementById('md-note').value=d.note||'';
+      DDT.loadClients();
+      document.getElementById('md-client').value=d.clientId||'';
+      DDT.onClientChange();
+      document.getElementById('md-rows').innerHTML='';
+      (d.rows||[]).forEach(r=>DDT.addRow(r));
+      openModal('m-ddt');
+    });
+  },
+  loadClients(){
+    const sel=document.getElementById('md-client');
+    sel.innerHTML='<option value="">-- Seleziona cliente --</option>';
+    Object.entries(_db.clients||{}).sort((a,b)=>a[1].nome.localeCompare(b[1].nome)).forEach(([k,c])=>{
+      sel.innerHTML+=`<option value="${k}">${c.nome}</option>`;
+    });
+  },
+  onClientChange(){
+    const id=document.getElementById('md-client').value;
+    const prev=document.getElementById('md-client-preview');
+    if(!id){prev.style.display='none';return;}
+    const c=_db.clients[id];
+    if(!c){prev.style.display='none';return;}
+    prev.style.display='block';
+    prev.textContent=`${c.indirizzo||''} | P.IVA: ${c.piva||'—'} | SDI: ${c.sdi||'—'} | Tel: ${c.telefono||'—'}`;
+  },
+  addRow(data={}){
+    const container=document.getElementById('md-rows');
+    const idx=container.children.length;
+    const div=document.createElement('div');
+    div.className='card';
+    div.style.marginBottom='8px';
+    div.style.padding='10px';
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-weight:600;font-size:.82rem">Riga ${idx+1}</span>
+        <button class="btn btn-d btn-xs" onclick="this.closest('.card').remove();DDT.recalc()">🗑</button>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="${data.qty||1}" placeholder="1" oninput="DDT.recalc()"></div>
+        <div class="fg" style="flex:2"><label class="fl">Descrizione</label>
+          <select class="fc fc-sm" onchange="DDT.onDescChange(this)">
+            <option value="">-- Seleziona --</option>
+            <option value="dop-fresco" ${data.desc==='Roccaverano DOP fresco'?'selected':''}>Roccaverano DOP fresco</option>
+            <option value="dop-affinato" ${data.desc==='Roccaverano DOP affinato'?'selected':''}>Roccaverano DOP affinato</option>
+            <option value="nondop" ${data.desc==='Robiola del Merlo Bianco'?'selected':''}>Robiola del Merlo Bianco</option>
+            <option value="custom" ${data.desc&&!['Roccaverano DOP fresco','Roccaverano DOP affinato','Robiola del Merlo Bianco'].includes(data.desc)?'selected':''}>Altro (manuale)</option>
+          </select>
+          <input type="text" class="fc fc-sm" style="margin-top:4px" placeholder="Descrizione libera" value="${data.desc||''}" data-desc-free>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Lotto</label><input type="text" class="fc fc-sm" placeholder="DD/MM/YYYY" value="${data.lot||''}"></div>
+        <div class="fg"><label class="fl">N° Bollino</label><input type="text" class="fc fc-sm" placeholder="MB0001/24" value="${data.bollino||''}"></div>
+        <div class="fg"><label class="fl">Prezzo tot. (IVA incl.)</label><input type="number" class="fc fc-sm" step="0.01" placeholder="0.00" value="${data.unitPrice||''}" oninput="DDT.recalc()"></div>
+      </div>
+    `;
+    container.appendChild(div);
+    // Trigger desc display
+    const sel=div.querySelector('select');
+    if(data.desc) DDT.onDescChange(sel);
+  },
+  onDescChange(sel){
+    const free=sel.parentElement.querySelector('[data-desc-free]');
+    if(!free) return;
+    const map={'dop-fresco':'Roccaverano DOP fresco','dop-affinato':'Roccaverano DOP affinato','nondop':'Robiola del Merlo Bianco'};
+    if(sel.value&&sel.value!=='custom'){ free.value=map[sel.value]||''; free.readOnly=true; }
+    else { free.readOnly=false; }
+  },
+  recalc(){
+    let impon=0;
+    document.querySelectorAll('#md-rows .card').forEach(row=>{
+      const qty=parseFloat(row.querySelector('input[type=number]').value)||0;
+      const price=parseFloat(row.querySelectorAll('input[type=number]')[1]?.value)||0;
+      impon+=qty*price;
+    });
+    const tt=document.getElementById('md-totale');
+    if(tt)tt.textContent=fmtEuro(impon);
+  },
+  save(){
+    const editId=document.getElementById('md-edit-id').value;
+    const num=document.getElementById('md-num').value.trim();
+    const date=document.getElementById('md-date').value;
+    const clientId=document.getElementById('md-client').value;
+    if(!num||!date||!clientId){toast('Compila numero DDT, data e cliente','w');return;}
+    const rows=[];
+    document.querySelectorAll('#md-rows .card').forEach(row=>{
+      const inputs=row.querySelectorAll('input');
+      const qty=parseInt(inputs[0].value)||1;
+      const desc=row.querySelector('[data-desc-free]')?.value||'';
+      const lot=inputs[2]?.value||'';
+      const bollino=inputs[3]?.value||'';
+      const unitPrice=parseFloat(inputs[4]?.value)||0;
+      rows.push({qty,desc,lot,bollino,unitPrice,totalPrice:(qty*unitPrice)});
+    });
+    const totaleDocumento=rows.reduce((s,r)=>s+r.totalPrice,0);
+    const ddt={
+      id:num,
+      date,
+      clientId,
+      myPhone:document.getElementById('md-mytel').value,
+      causale:document.getElementById('md-causale').value,
+      rows,
+      totaleDocumento,
+      note:document.getElementById('md-note').value
+    };
+    if(!editId){
+      if(_db.ddt[num]&&!confirm(`DDT ${num} già esistente. Sovrascrivere?`)) return;
+      _db.settings.nextDDT=(_db.settings.nextDDT||1)+1;
+    }
+    _db.ddt[num]=ddt;
+    Store.saveNow();
+    closeModal('m-ddt');
+    DDT.render();
+    toast(`DDT ${num} salvato`,'s');
+  },
+  deleteDDT(id){
+    confirm2(`Eliminare il DDT ${id}?`,()=>{
+      delete _db.ddt[id];
+      Store.saveNow();
+      DDT.render();
+      toast('DDT eliminato','w');
+    });
+  },
+  generatePDF(id){
+    const d=_db.ddt[id];
+    if(!d){toast('DDT non trovato','e');return;}
+    const client=_db.clients[d.clientId]||{};
+    const az=_db.settings.azienda||{};
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:'mm',format:'a4'});
+    const pw=doc.internal.pageSize.getWidth();
+    // Header
+    doc.setFillColor(45,80,22);
+    doc.rect(0,0,pw,28,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica','bold');
+    doc.text('DOCUMENTO DI TRASPORTO',14,12);
+    doc.setFontSize(11);
+    doc.text(`N° ${id}`,14,20);
+    doc.setFontSize(10);
+    doc.text(`Data: ${fmtDate(d.date)}`,pw-14,20,{align:'right'});
+    doc.setTextColor(0,0,0);
+    // Mittente
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold');
+    doc.text('MITTENTE',14,36);
+    doc.setFont('helvetica','normal');
+    doc.text(az.nome||'—',14,42);
+    doc.text(az.indirizzo||'—',14,47);
+    doc.text(`P.IVA: ${az.piva||'—'}`,14,52);
+    doc.text(`Tel: ${d.myPhone||az.telefono||'—'}`,14,57);
+    if(az.sdi) doc.text(`Cod.SDI: ${az.sdi}`,14,62);
+    // Destinatario
+    doc.setFont('helvetica','bold');
+    doc.text('DESTINATARIO',110,36);
+    doc.setFont('helvetica','normal');
+    doc.text(client.nome||'—',110,42);
+    doc.text(client.indirizzo||'—',110,47);
+    doc.text(`P.IVA: ${client.piva||'—'}`,110,52);
+    doc.text(`Tel: ${client.telefono||'—'}`,110,57);
+    if(client.sdi) doc.text(`Cod.Univ: ${client.sdi}`,110,62);
+    // Causale
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold');
+    doc.text('Causale:',14,72);
+    doc.setFont('helvetica','normal');
+    doc.text(d.causale||'—',40,72);
+    // Table
+    const tableData=(d.rows||[]).map((r,i)=>[
+      i+1, r.qty, r.desc||'—', r.lot||'—', r.bollino||'—',
+      fmtEuro(r.unitPrice), fmtEuro(r.totalPrice)
+    ]);
+    doc.autoTable({
+      startY:78,
+      head:[['#','Qty','Descrizione','Lotto','Bollino','Prezzo un.','Totale']],
+      body:tableData,
+      styles:{fontSize:8,cellPadding:2},
+      headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'},
+      columnStyles:{0:{cellWidth:8},1:{cellWidth:10},2:{cellWidth:60},3:{cellWidth:25},4:{cellWidth:25},5:{cellWidth:18},6:{cellWidth:18}},
+      margin:{left:14,right:14}
+    });
+    const finalY=doc.lastAutoTable.finalY+8;
+    // Totale box
+    doc.setFillColor(232,240,224);doc.rect(pw-78,finalY,64,14,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(10);
+    doc.text(`TOTALE (IVA incl.): ${fmtEuro(d.totaleDocumento||d.totalAmount||0)}`,pw-75,finalY+9);
+    if(d.note){
+      doc.setFontSize(8);doc.setFont('helvetica','normal');
+      doc.text('Note: '+d.note,14,finalY+8);
+    }
+    // Footer
+    const fy=doc.internal.pageSize.getHeight()-14;
+    doc.setFontSize(7);
+    doc.setTextColor(120,120,120);
+    doc.text(`${az.nome||'Merlo Bianco'} – DDT ${id} – ${fmtDate(d.date)}`,14,fy);
+    doc.save(`DDT-${id.replace('/','_')}.pdf`);
+    toast('PDF generato','s');
+  }
+};
+
+/* ── CLIENTS ── */
+const Clients = {
+  getName(id){ const c=_db.clients&&_db.clients[id]; return c?c.nome:'—'; },
+  render(){
+    const items=Object.entries(_db.clients||{}).sort((a,b)=>a[1].nome.localeCompare(b[1].nome));
+    if(!items.length){
+      document.getElementById('clienti-list').innerHTML='<div class="empty"><div class="ei">👥</div><p>Nessun cliente. Aggiungine uno con il pulsante "+". I dati verranno usati per pre-compilare i DDT.</p></div>';
+      return;
+    }
+    document.getElementById('clienti-list').innerHTML=`<div class="tw"><table>
+      <thead><tr><th>Nome / Rag. Soc.</th><th>P.IVA</th><th>Indirizzo</th><th>SDI</th><th>Telefono</th><th></th></tr></thead>
+      <tbody>${items.map(([id,c])=>`<tr>
+        <td><b>${c.nome}</b></td>
+        <td><span class="mini">${c.piva||'—'}</span></td>
+        <td><span class="mini">${c.indirizzo||'—'}</span></td>
+        <td><span class="mini">${c.sdi||'—'}</span></td>
+        <td><span class="mini">${c.telefono||'—'}</span></td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost btn-xs" onclick="Clients.openEdit('${id}')">✏</button>
+          <button class="btn btn-d btn-xs" onclick="Clients.delete('${id}')">🗑</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  },
+  openAdd(){
+    document.getElementById('m-client-title').textContent='Nuovo cliente';
+    document.getElementById('mcl-edit-id').value='';
+    ['mcl-nome','mcl-piva','mcl-ind','mcl-sdi','mcl-tel'].forEach(id=>document.getElementById(id).value='');
+    openModal('m-client');
+  },
+  openEdit(id){
+    const c=_db.clients[id];
+    if(!c) return;
+    confirm2(`Modificare il cliente "${c.nome}"?`,()=>{
+      document.getElementById('m-client-title').textContent=`Modifica: ${c.nome}`;
+      document.getElementById('mcl-edit-id').value=id;
+      document.getElementById('mcl-nome').value=c.nome||'';
+      document.getElementById('mcl-piva').value=c.piva||'';
+      document.getElementById('mcl-ind').value=c.indirizzo||'';
+      document.getElementById('mcl-sdi').value=c.sdi||'';
+      document.getElementById('mcl-tel').value=c.telefono||'';
+      openModal('m-client');
+    });
+  },
+  save(){
+    const editId=document.getElementById('mcl-edit-id').value;
+    const nome=document.getElementById('mcl-nome').value.trim();
+    if(!nome){toast('Il nome è obbligatorio','w');return;}
+    const id=editId||uuid();
+    _db.clients[id]={
+      nome,
+      piva:document.getElementById('mcl-piva').value,
+      indirizzo:document.getElementById('mcl-ind').value,
+      sdi:document.getElementById('mcl-sdi').value,
+      telefono:document.getElementById('mcl-tel').value
+    };
+    Store.saveNow();
+    closeModal('m-client');
+    Clients.render();
+    toast('Cliente salvato','s');
+  },
+  delete(id){
+    const c=_db.clients[id];
+    confirm2(`Eliminare il cliente "${c?c.nome:'?'}"?`,()=>{
+      delete _db.clients[id];
+      Store.saveNow();
+      Clients.render();
+      toast('Cliente eliminato','w');
+    });
+  }
+};
+
+/* ── REPORT ── */
+const Report = {
+  init(){
+    const f=document.getElementById('rep-from');
+    const t=document.getElementById('rep-to');
+    if(!f.value){
+      const d=new Date();
+      f.value=new Date(d.getFullYear(),d.getMonth(),1).toISOString().split('T')[0];
+      t.value=today();
+    }
+  },
+  getRange(){
+    const from=document.getElementById('rep-from').value;
+    const to=document.getElementById('rep-to').value;
+    if(!from||!to){toast('Seleziona un intervallo di date','w');return null;}
+    return{from,to};
+  },
+  getLots(from,to){
+    return Object.entries(_db.production)
+      .filter(([id])=>id>=from&&id<=to)
+      .sort((a,b)=>a[0].localeCompare(b[0]));
+  },
+  pdfProd(){
+    const r=Report.getRange();if(!r)return;
+    const lots=Report.getLots(r.from,r.to);
+    if(!lots.length){toast('Nessun lotto nel periodo selezionato','w');return;}
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:'mm',format:'a4'});
+    const pw=doc.internal.pageSize.getWidth();
+    Report.pdfHeader(doc,'REGISTRO PRODUZIONE',r.from,r.to);
+    const rows=lots.map(([id,l])=>[
+      isoToLot(id), l.liters||'—', l.forms||'—',
+      l.sieroInnesto?'Sì':'No', l.caglioLot||'—', l.coagHours||'—', l.stampiRest||'—',
+      l.physConf?`${l.physConf.result} (${fmtDate(l.physConf.date)})`:'—',
+      l.orgConf?`${l.orgConf.result}`:'—',
+      l.chemConf?`${l.chemConf.result}`:'—',
+      ((l.forms||0)*0.31).toFixed(2)
+    ]);
+    const totL=lots.reduce((s,[,l])=>s+Number(l.liters||0),0);
+    const totF=lots.reduce((s,[,l])=>s+Number(l.forms||0),0);
+    rows.push(['TOTALE',totL.toFixed(0),totF,'','','','','','','', (totF*0.31).toFixed(2)]);
+    doc.autoTable({
+      startY:38,
+      head:[['Lotto','Litri','Forme','Siero','Caglio','Coag.','Stampi','Conf.Fis','Conf.Org','Conf.Chim','Kg']],
+      body:rows,
+      styles:{fontSize:7,cellPadding:1.5},
+      headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'},
+      didParseCell(d){ if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,210,190];} }
+    });
+    doc.save(`produzione-${r.from}-${r.to}.pdf`);
+    toast('PDF Produzione generato','s');
+  },
+  pdfSales(){
+    const r=Report.getRange();if(!r)return;
+    const lots=Report.getLots(r.from,r.to);
+    if(!lots.length){toast('Nessun lotto nel periodo','w');return;}
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+    Report.pdfHeader(doc,'REGISTRO VENDITE / USCITE',r.from,r.to);
+    const rows=[];
+    let totDOP=0,totND=0,totAuto=0;
+    lots.forEach(([id])=>{
+      const slist=_db.sales[id]||[];
+      slist.forEach(s=>{
+        rows.push([
+          isoToLot(id),
+          fmtDate(s.date),
+          s.type==='dop'?'DOP':s.type==='nondop'?'Non DOP':'Autoconsumo',
+          s.qty,
+          (s.bollini||[]).join(', ')||'—',
+          s.method||'—',
+          s.ddtId||s.ndRef||s.scontrinoDate||'—',
+          s.note||''
+        ]);
+        if(s.type==='dop') totDOP+=Number(s.qty||0);
+        else if(s.type==='nondop') totND+=Number(s.qty||0);
+        else totAuto+=Number(s.qty||0);
+      });
+    });
+    if(!rows.length){toast('Nessuna uscita nel periodo','w');return;}
+    rows.push(['TOTALE','','DOP:'+totDOP+' ND:'+totND+' Auto:'+totAuto,'','','','','']);
+    doc.autoTable({
+      startY:38,
+      head:[['Lotto','Data','Tipo','Qty','Bollini','Metodo','Riferimento','Note']],
+      body:rows,
+      styles:{fontSize:7,cellPadding:1.5},
+      headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'},
+      didParseCell(d){ if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,210,190];} }
+    });
+    doc.save(`vendite-${r.from}-${r.to}.pdf`);
+    toast('PDF Vendite generato','s');
+  },
+  pdfDisciplinare(){
+    const r=Report.getRange();if(!r)return;
+    const lots=Report.getLots(r.from,r.to);if(!lots.length){toast('Nessun lotto nel periodo','w');return;}
+    const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+    const az=_db.settings.azienda||{};const pw=doc.internal.pageSize.getWidth();
+    doc.setFillColor(45,80,22);doc.rect(0,0,pw,32,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont('helvetica','bold');
+    doc.text('REPORT DISCIPLINARE DOP – Robiola di Roccaverano DOP',14,12);
+    doc.setFontSize(9);doc.text(`${az.nome||'Azienda Agricola Merlo Bianco'} – P.IVA: ${az.piva||'—'}`,14,21);
+    doc.text(`${az.indirizzo||''}`,14,27);doc.text(`Periodo: ${fmtDate(r.from)} – ${fmtDate(r.to)}`,pw-14,27,{align:'right'});
+    doc.setTextColor(0,0,0);
+    const rows=[];
+    lots.forEach(([id,l])=>{
+      const slist=_db.sales[id]||[];const dopSales=slist.filter(s=>s.type==='dop');
+      const totDOP=dopSales.reduce((s,x)=>s+Number(x.qty||0),0);
+      const bollini=dopSales.flatMap(s=>s.bollini||[]).join(' ');
+      const ddtRefs=[...new Set(dopSales.map(s=>s.ddtId).filter(Boolean))].join(', ');
+      const clients=[...new Set(dopSales.map(s=>{const d=_db.ddt[s.ddtId];return d?Clients.getName(d.clientId):'';}).filter(Boolean))].join(', ');
+      rows.push([isoToLot(id),l.liters||'—',l.forms||'—',l.physConf?l.physConf.result:'—',l.chemConf?l.chemConf.result:'—',totDOP,(totDOP*0.28).toFixed(2),bollini||'—',ddtRefs||'—',clients||'—']);
+    });
+    const tF=lots.reduce((s,[,l])=>s+Number(l.forms||0),0);
+    const tDOP=lots.reduce((s,[id])=>s+(_db.sales[id]||[]).filter(x=>x.type==='dop').reduce((ss,x)=>ss+Number(x.qty||0),0),0);
+    rows.push(['TOTALE','',tF,'','',tDOP,(tDOP*0.28).toFixed(2),'','','']);
+    doc.autoTable({startY:36,head:[['Lotto','Litri','Forme','C.Fis','C.Chi','Forme DOP','Kg DOP','Bollini','DDT','Clienti']],body:rows,styles:{fontSize:6.5,cellPadding:1.5},headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'},columnStyles:{7:{cellWidth:50},8:{cellWidth:25},9:{cellWidth:35}},didParseCell(d){if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,215,185];}}});
+    const pgH=doc.internal.pageSize.getHeight();
+    doc.setFontSize(7);doc.setTextColor(150,150,150);
+    doc.text(`Generato il ${fmtDate(today())} – Documento per uso certificazione DOP`,14,pgH-8);
+    doc.save(`disciplinare-DOP-${r.from}-${r.to}.pdf`);toast('PDF Disciplinare DOP generato','s');
+  },
+  pdfBollini(){
+    const r=Report.getRange();if(!r)return;
+    const used=Object.entries(_db.bollini||{}).filter(([,b])=>b.used&&b.usedDate&&b.usedDate>=r.from&&b.usedDate<=r.to).sort((a,b)=>a[0].localeCompare(b[0]));
+    if(!used.length){toast('Nessun bollino usato nel periodo','w');return;}
+    const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
+    Report.pdfHeader(doc,'REPORT BOLLINI DOP',r.from,r.to);
+    const rows=used.map(([id,b])=>[id,'Usato',b.lotId?isoToLot(b.lotId):'—',fmtDate(b.usedDate)]);
+    doc.autoTable({startY:38,head:[['Bollino','Stato','Lotto','Data uso']],body:rows,styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'}});
+    const free=Object.values(_db.bollini||{}).filter(b=>!b.used).length;
+    const fy=doc.lastAutoTable.finalY+8;
+    doc.setFontSize(9);doc.setFont('helvetica','bold');
+    doc.text(`Usati nel periodo: ${used.length}  |  Bollini disponibili: ${free}`,14,fy);
+    doc.save(`bollini-${r.from}-${r.to}.pdf`);toast('PDF Bollini generato','s');
+  },
+  pdfAnalisi(){
+    const r=Report.getRange();if(!r)return;
+    const items=Object.values(_db.milkAnalysis||{}).filter(a=>a.date>=r.from&&a.date<=r.to).sort((a,b)=>a.date.localeCompare(b.date));
+    if(!items.length){toast('Nessuna analisi nel periodo','w');return;}
+    const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+    Report.pdfHeader(doc,'REPORT ANALISI LATTE',r.from,r.to);
+    const rows=items.map(a=>[fmtDate(a.date),a.type==='lab'?'Laboratorio':'Giornaliero',a.liters||'—',a.fat||'—',a.proteins||'—',a.lactose||'—',a.caseins||'—',a.caseinIndex||'—',a.somaticCells||'—',a.bacterialLoad||'—',a.note||'']);
+    doc.autoTable({startY:38,head:[['Data','Tipo','Litri','Grasso%','Prot.%','Latt.%','Cas.%','Ind.Cas.','CS×1000','CB UFC','Note']],body:rows,styles:{fontSize:7.5,cellPadding:1.5},headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'}});
+    doc.save(`analisi-latte-${r.from}-${r.to}.pdf`);toast('PDF Analisi Latte generato','s');
+  },
+  pdfFull(){
+    const r=Report.getRange();if(!r)return;
+    Report.pdfProd();setTimeout(()=>Report.pdfSales(),500);
+  },
+  pdfHeader(doc,title,from,to){
+    const pw=doc.internal.pageSize.getWidth();
+    doc.setFillColor(45,80,22);
+    doc.rect(0,0,pw,28,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica','bold');
+    doc.text('🧀 Merlo Bianco – Gestionale Caseificio',14,11);
+    doc.setFontSize(11);
+    doc.text(title,14,20);
+    doc.setFontSize(9);
+    doc.text(`Periodo: ${fmtDate(from)} – ${fmtDate(to)}`,pw-14,20,{align:'right'});
+    doc.setTextColor(0,0,0);
+    doc.setFontSize(8);
+    doc.text(`Generato il ${fmtDate(today())}`,14,32);
+  },
+  trace(){
+    const q=document.getElementById('trace-q').value.trim();
+    if(!q){toast('Inserisci una query','w');return;}
+    const results=[];
+    // Bollino (4 cifre)
+    if(/^\d{4}$/.test(q)){
+      Object.entries(_db.bollini||{}).filter(([id])=>id.startsWith('MB'+q)).forEach(([bid,b])=>{
+        const sale=b.lotId?(_db.sales[b.lotId]||[]).find(s=>s.bollini?.includes(bid)):null;
+        const ddt=sale?.ddtId?_db.ddt[sale.ddtId]:null;
+        results.push(`<div class="card"><div class="card-title">🏷 Bollino ${bid}</div>
+          <p><b>Stato:</b> ${b.used?'<span class="bdg bdg-err">USATO</span>':'<span class="bdg bdg-ok">DISPONIBILE</span>'}</p>
+          ${b.lotId?`<p><b>Lotto:</b> ${isoToLot(b.lotId)} – uso il ${fmtDate(b.usedDate)}</p>`:''}
+          ${sale?`<p><b>Vendita:</b> ${fmtDate(sale.date)} – ${sale.qty} forme – ${sale.method||'—'}</p>`:''}
+          ${ddt?`<p><b>DDT:</b> ${ddt.id} del ${fmtDate(ddt.date)} – ${Clients.getName(ddt.clientId)}</p>`:''}
+        </div>`);
+      });
+    }
+    // Lotto
+    Object.entries(_db.production).forEach(([id,l])=>{
+      if(isoToLot(id)===q||id===q){
+        const slist=_db.sales[id]||[];const rem=Mag.remaining(id);
+        results.push(`<div class="card"><div class="card-title">🏭 Lotto ${isoToLot(id)}</div>
+          <p>${l.liters}L – ${l.forms} forme – Rimanenza: <b>${rem}</b> – Giorno ${daysSince(id)}</p>
+          <p>Fisiche: ${l.physConf?l.physConf.result:'—'} | Org: ${l.orgConf?l.orgConf.result:'—'} | Chim: ${l.chemConf?l.chemConf.result:'—'}</p>
+          ${slist.map(s=>`<p class="mini">→ ${fmtDate(s.date)} ${s.type} ×${s.qty}${s.bollini?' | '+s.bollini.join(' '):''}${s.ddtId?' | DDT '+s.ddtId:''}</p>`).join('')}
+        </div>`);
+      }
+    });
+    // DDT
+    if(_db.ddt[q]){
+      const d=_db.ddt[q];const c=_db.clients[d.clientId]||{};
+      results.push(`<div class="card"><div class="card-title">📄 DDT ${q}</div>
+        <p><b>${fmtDate(d.date)}</b> – ${c.nome||'—'} | ${c.indirizzo||''}</p>
+        ${(d.rows||[]).map(rr=>`<p class="mini">→ ${rr.qty}× ${rr.desc||'—'} – Lotto ${rr.lot||'—'} – Bollino ${rr.bollino||'—'} – ${fmtEuro(rr.totalPrice)}</p>`).join('')}
+        <p><b>Totale (IVA incl.): ${fmtEuro(d.totaleDocumento||d.totalAmount)}</b></p>
+      </div>`);
+    }
+    // Cliente (ricerca per nome)
+    Object.entries(_db.clients||{}).forEach(([cid,c])=>{
+      if(c.nome.toLowerCase().includes(q.toLowerCase())||c.piva?.includes(q)){
+        const ddts=Object.entries(_db.ddt||{}).filter(([,d])=>d.clientId===cid);
+        const allBol=ddts.flatMap(([,d])=>(d.rows||[]).map(r=>r.bollino).filter(Boolean));
+        const totale=ddts.reduce((s,[,d])=>s+(d.totaleDocumento||d.totalAmount||0),0);
+        results.push(`<div class="card"><div class="card-title">👥 ${c.nome}</div>
+          <p>P.IVA: ${c.piva||'—'} | Tel: ${c.telefono||'—'} | Email: ${c.email||'—'}</p>
+          <p><b>DDT emessi:</b> ${ddts.map(([id])=>id).join(', ')||'Nessuno'}</p>
+          <p><b>Totale acquistato:</b> ${fmtEuro(totale)}</p>
+          ${allBol.length?`<p class="mini"><b>Bollini:</b> ${allBol.join(' ')}</p>`:''}
+        </div>`);
+      }
+    });
+    document.getElementById('trace-result').innerHTML=results.length?results.join(''):'<div class="alert alert-w">Nessun risultato per questa query.</div>';
+  }
+};
+
+/* ── SETTINGS ── */
+const Settings = {
+  render(){
+    const a=_db.settings.azienda||{};
+    document.getElementById('cfg-nome').value=a.nome||'';
+    document.getElementById('cfg-piva').value=a.piva||'';
+    document.getElementById('cfg-ind').value=a.indirizzo||'';
+    document.getElementById('cfg-tel').value=a.telefono||'';
+    document.getElementById('cfg-sdi').value=a.sdi||'';
+    const em=document.getElementById('cfg-email');if(em)em.value=a.email||'';
+    document.getElementById('cfg-gid').value=_db.settings.googleClientId||'';
+  },
+  loadUI(){ Settings.render(); },
+  save(){
+    _db.settings.azienda={
+      nome:document.getElementById('cfg-nome').value,
+      piva:document.getElementById('cfg-piva').value,
+      indirizzo:document.getElementById('cfg-ind').value,
+      telefono:document.getElementById('cfg-tel').value,
+      sdi:document.getElementById('cfg-sdi').value,
+      email:document.getElementById('cfg-email')?.value||''
+    };
+    Store.saveNow();
+    toast('Impostazioni salvate','s');
+  },
+  saveGoogleId(){
+    _db.settings.googleClientId=document.getElementById('cfg-gid').value.trim();
+    Store.saveNow();
+    toast('Client ID salvato','s');
+  }
+};
+
+/* ── GOOGLE DRIVE ── */
+const Drive = {
+  _token:null,
+  _fileId:null,
+  _timer:null,
+  _gisClient:null,
+  initStatus(){
+    if(_db.settings.gdrive&&_db.settings.gdrive.token){
+      Drive._token=_db.settings.gdrive.token;
+      Drive._fileId=_db.settings.gdrive.fileId;
+      Drive.updateUI('Connesso (token salvato). Sync al prossimo salvataggio.');
+    } else {
+      Drive.updateUI('Non connesso');
+    }
+    // Load GIS if clientId present
+    if(_db.settings.googleClientId) Drive.loadGIS();
+  },
+  loadGIS(){
+    if(window.google&&window.google.accounts) return;
+    const s=document.createElement('script');
+    s.src='https://accounts.google.com/gsi/client';
+    s.async=true;
+    s.defer=true;
+    document.head.appendChild(s);
+  },
+  connect(){
+    const clientId=_db.settings.googleClientId;
+    if(!clientId){toast('Configura prima il Google Client ID nelle Impostazioni','w');Router.go('impostazioni');return;}
+    if(!window.google||!window.google.accounts){
+      Drive.loadGIS();
+      setTimeout(Drive.connect,1500);
+      toast('Caricamento Google Identity...','i');
+      return;
+    }
+    Drive._gisClient=google.accounts.oauth2.initTokenClient({
+      client_id:clientId,
+      scope:'https://www.googleapis.com/auth/drive.file',
+      callback:(resp)=>{
+        if(resp.error){toast('Errore autenticazione Google: '+resp.error,'e');return;}
+        Drive._token=resp.access_token;
+        _db.settings.gdrive.token=resp.access_token;
+        Store.save(_mode,_db);
+        Drive.updateUI('✅ Connesso a Google Drive');
+        document.getElementById('btn-drive').textContent='☁ Sync ora';
+        toast('Connesso a Google Drive','s');
+        Drive.saveToCloud();
+      }
+    });
+    Drive._gisClient.requestAccessToken();
+  },
+  disconnect(){
+    if(Drive._token&&window.google){
+      try{ google.accounts.oauth2.revoke(Drive._token,()=>{}); }catch(e){}
+    }
+    Drive._token=null;
+    Drive._fileId=null;
+    _db.settings.gdrive={fileId:null,token:null,email:null};
+    Store.save(_mode,_db);
+    Drive.updateUI('Disconnesso');
+    toast('Disconnesso da Google Drive','w');
+  },
+  scheduleSave(){
+    if(!Drive._token) return;
+    if(Drive._timer) clearTimeout(Drive._timer);
+    Drive._timer=setTimeout(Drive.saveToCloud,3000);
+  },
+  async saveToCloud(){
+    if(!Drive._token) return;
+    const data=JSON.stringify(_db);
+    const fileName=`merlo-bianco-${_mode}.json`;
+    try{
+      let fileId=Drive._fileId||_db.settings.gdrive.fileId;
+      if(!fileId){
+        // Search for existing file
+        const search=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}'&fields=files(id,name)`,{
+          headers:{Authorization:`Bearer ${Drive._token}`}
+        });
+        const sData=await search.json();
+        if(sData.files&&sData.files.length>0) fileId=sData.files[0].id;
+      }
+      const meta={name:fileName,mimeType:'application/json'};
+      const form=new FormData();
+      form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+      form.append('file',new Blob([data],{type:'application/json'}));
+      const url=fileId
+        ?`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+        :'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+      const method=fileId?'PATCH':'POST';
+      const resp=await fetch(url,{method,headers:{Authorization:`Bearer ${Drive._token}`},body:form});
+      const result=await resp.json();
+      if(result.id){
+        Drive._fileId=result.id;
+        _db.settings.gdrive.fileId=result.id;
+        localStorage.setItem(Store.key(_mode),JSON.stringify(_db));
+        const t=new Date().toLocaleTimeString('it-IT');
+        Drive.updateUI(`✅ Sincronizzato alle ${t}`);
+      } else {
+        Drive.updateUI('⚠ Errore sync: '+JSON.stringify(result.error||result));
+      }
+    }catch(e){
+      Drive.updateUI('⚠ Errore rete: '+e.message);
+    }
+  },
+  async loadFromCloud(){
+    if(!Drive._token){toast('Non connesso a Drive','w');return;}
+    const fileName=`merlo-bianco-${_mode}.json`;
+    try{
+      const s=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}'&fields=files(id)`,{
+        headers:{Authorization:`Bearer ${Drive._token}`}
+      });
+      const sd=await s.json();
+      if(!sd.files||!sd.files.length){toast('Nessun file trovato su Drive','w');return;}
+      const fid=sd.files[0].id;
+      const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{
+        headers:{Authorization:`Bearer ${Drive._token}`}
+      });
+      const d=await r.json();
+      confirm2('Sovrascrivere il database locale con i dati da Drive?',()=>{
+        _db=Object.assign(emptyDB(),d);
+        Store.save(_mode,_db);
+        Router.render(Router.current);
+        toast('Database sincronizzato da Drive','s');
+      });
+    }catch(e){toast('Errore caricamento da Drive: '+e.message,'e');}
+  },
+  updateUI(msg){
+    const el=document.getElementById('drive-status');
+    if(el) el.textContent=msg;
+    const btn=document.getElementById('btn-drive');
+    if(btn) btn.textContent=Drive._token?'☁ Sync':'☁ Drive';
+  }
+};
+
+/* ── TEST DATA ── */
+const TestData = {
+  load(){
+    const db=emptyDB();
+    db.settings.azienda={nome:'Az. Agr. Merlo Bianco (TEST)',indirizzo:'Fraz. Isola 12, 14040 Mombaldone AT',piva:'01234567890',telefono:'+39 333 1234567',sdi:'0000000'};
+    db.settings.nextDDT=3;
+    // Clients
+    const c1=uuid(),c2=uuid();
+    db.clients[c1]={nome:'Ristorante La Quercia',piva:'09876543210',indirizzo:'Via Roma 45, 12051 Alba CN',sdi:'ABC1234',telefono:'+39 0173 441122'};
+    db.clients[c2]={nome:'Bottega del Formaggio SNC',piva:'11223344550',indirizzo:'Corso Vittorio 10, 14100 Asti AT',sdi:'XYZ9876',telefono:'+39 0141 201020'};
+    // Bollini
+    for(let n=1;n<=50;n++){
+      const id=fmtBollino(n,'24');
+      db.bollini[id]={id,num:pad4(n),year:'24',used:n<=12,usedDate:n<=12?'2026-03-'+pad2(n):null,lotId:n<=12?`2026-03-0${Math.ceil(n/4)}`:null,saleId:null};
+    }
+    for(let n=1;n<=30;n++){
+      const id=fmtBollino(n,'26');
+      db.bollini[id]={id,num:pad4(n),year:'26',used:false,usedDate:null,lotId:null,saleId:null};
+    }
+    // Production (last 30 days)
+    const prodDates=['2026-02-10','2026-02-17','2026-02-24','2026-03-02','2026-03-09','2026-03-12','2026-03-14'];
+    const phConfs=['C','C','C','C','C','C',null];
+    prodDates.forEach((d,i)=>{
+      db.production[d]={
+        liters:70+i*5, forms:10+i, sieroInnesto:i%2===0,
+        coagHours:'1h 30m', caglioLot:`CAG-2025-00${i+1}`, stampiRest:'12 ore',
+        physConf:phConfs[i]?{date:new Date(new Date(d).getTime()+4*86400000).toISOString().split('T')[0],result:phConfs[i],notes:''}:null,
+        orgConf:i<4?{date:new Date(new Date(d).getTime()+7*86400000).toISOString().split('T')[0],result:'C',notes:'Buona acidità e consistenza'}:null,
+        chemConf:i===0?{date:'2026-01-15',result:'C',notes:'Analisi semestrali OK'}:null,
+        note:'', createdAt:Date.now()
+      };
+    });
+    // Sales
+    db.sales['2026-02-10']=[
+      {id:uuid(),date:'2026-02-18',type:'dop',qty:3,bollini:['MB0001/24','MB0002/24','MB0003/24'],method:'ddt',ddtId:'01C/26',note:''},
+      {id:uuid(),date:'2026-02-20',type:'autoconsumo',qty:1,note:'Assaggio con cliente'}
+    ];
+    db.sales['2026-02-17']=[
+      {id:uuid(),date:'2026-02-24',type:'dop',qty:2,bollini:['MB0004/24','MB0005/24'],method:'scontrino',scontrinoDate:'2026-02-24',note:''},
+      {id:uuid(),date:'2026-02-25',type:'nondop',qty:3,method:'scontrino',ndRef:'2026-02-25',note:''}
+    ];
+    db.sales['2026-02-24']=[
+      {id:uuid(),date:'2026-03-03',type:'dop',qty:4,bollini:['MB0006/24','MB0007/24','MB0008/24','MB0009/24'],method:'ddt',ddtId:'02C/26',note:''}
+    ];
+    db.sales['2026-03-02']=[
+      {id:uuid(),date:'2026-03-10',type:'dop',qty:2,bollini:['MB0010/24','MB0011/24'],method:'scontrino',scontrinoDate:'2026-03-10',note:''}
+    ];
+    // DDT
+    db.ddt['01C/26']={
+      id:'01C/26',date:'2026-02-18',clientId:c1,myPhone:'+39 333 1234567',causale:'Cessione a titolo oneroso',
+      rows:[{qty:3,desc:'Roccaverano DOP fresco',lot:'10/02/2026',bollino:'MB0001/24 MB0002/24 MB0003/24',unitPrice:10.00,totalPrice:30.00}],
+      totaleDocumento:31.20,note:'Prima consegna 2026'
+    };
+    db.ddt['02C/26']={
+      id:'02C/26',date:'2026-03-03',clientId:c2,myPhone:'+39 333 1234567',causale:'Cessione a titolo oneroso',
+      rows:[
+        {qty:4,desc:'Roccaverano DOP affinato',lot:'24/02/2026',bollino:'MB0006/24 MB0007/24 MB0008/24 MB0009/24',unitPrice:12.00,totalPrice:48.00},
+        {qty:2,desc:'Robiola del Merlo Bianco',lot:'24/02/2026',bollino:'',unitPrice:7.00,totalPrice:14.00}
+      ],
+      totaleDocumento:64.48,note:''
+    };
+    // Analisi latte campione
+    if(!db.milkAnalysis) db.milkAnalysis={};
+    [['2026-01-15','lab',70,3.85,3.20,4.50,2.62,81.9,155,4800],
+     ['2026-01-22','daily',68,null,null,null,null,null,null,null],
+     ['2026-02-01','lab',72,3.90,3.25,4.48,2.65,82.1,142,4200],
+     ['2026-02-15','lab',75,3.88,3.22,4.52,2.63,81.5,138,3900],
+     ['2026-03-01','lab',78,3.92,3.28,4.47,2.68,82.5,130,3700],
+     ['2026-03-12','daily',82,null,null,null,null,null,null,null]
+    ].forEach(([d,t,l,fat,pr,la,ca,ci,sc,bc])=>{
+      const id=uuid();
+      db.milkAnalysis[id]={id,date:d,type:t,liters:l,fat,proteins:pr,lactose:la,caseins:ca,caseinIndex:ci,somaticCells:sc,bacterialLoad:bc,note:''};
+    });
+    // Fix bollini usedDate links
+    ['MB0006/24','MB0007/24','MB0008/24','MB0009/24'].forEach(b=>{ if(db.bollini[b]) db.bollini[b].lotId='2026-02-24'; });
+    ['MB0010/24','MB0011/24'].forEach(b=>{ if(db.bollini[b]) db.bollini[b].lotId='2026-03-02'; });
+    Store.save('test',db);
+    if(_mode==='test'){
+      _db=db;
+      Router.render(Router.current);
+    }
+    toast('Dati campione caricati nel database TEST','s');
+  }
+};
+
+/* ── PWA MANIFEST (inject dinamico) ── */
+const PWA = {
+  init(){
+    const manifest = {
+      name: 'Merlo Bianco – Gestionale Caseificio',
+      short_name: 'Merlo Bianco',
+      description: 'Gestionale produzione e vendita formaggio DOP Roccaverano',
+      start_url: './',
+      display: 'standalone',
+      background_color: '#F7F3EC',
+      theme_color: '#2D5016',
+      orientation: 'any',
+      icons: [
+        { src: PWA.svgIcon(192), sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+        { src: PWA.svgIcon(512), sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    document.getElementById('pwa-manifest').href = url;
+
+    // Service Worker inline via blob
+    if('serviceWorker' in navigator){
+      const swCode = `
+        const CACHE = 'mb-v1';
+        const ASSETS = ['./', './index.html'];
+        self.addEventListener('install', e => {
+          e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{})));
+          self.skipWaiting();
+        });
+        self.addEventListener('activate', e => {
+          e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+          self.clients.claim();
+        });
+        self.addEventListener('fetch', e => {
+          if(e.request.method !== 'GET') return;
+          e.respondWith(
+            fetch(e.request).catch(() => caches.match(e.request).then(r => r || caches.match('./')))
+          );
+        });
+      `;
+      const swBlob = new Blob([swCode], {type:'application/javascript'});
+      const swUrl = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swUrl, {scope:'./'})
+        .then(()=> console.log('SW registrato'))
+        .catch(e => console.warn('SW non registrato (normale su file://):', e.message));
+    }
+  },
+  svgIcon(size){
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" rx="${size*0.19}" fill="%232D5016"/><text y="${size*0.78}" x="${size*0.5}" text-anchor="middle" font-size="${size*0.6}" font-family="serif">🧀</text></svg>`;
+    return 'data:image/svg+xml,' + svg;
+  }
+};
+
+/* ── CONFORMITA PAGE ── */
+const Conf={
+  curTab:'fisiche',
+  showTab(tab,btn){
+    Conf.curTab=tab;
+    ['fisiche','organolettiche','chimiche'].forEach(t=>{document.getElementById(`conf-tab-${t}`).style.display=t===tab?'block':'none';});
+    document.querySelectorAll('#sec-conformita .tab-btn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');Conf.renderTab(tab);
+  },
+  render(){Alerts.renderConf();Conf.renderTab(Conf.curTab);},
+  renderTab(tab){
+    const el=document.getElementById(`conf-tab-${tab}`);if(!el)return;
+    const allLots=Object.entries(_db.production).sort((a,b)=>b[0].localeCompare(a[0]));
+    if(tab==='fisiche'){
+      if(!allLots.length){el.innerHTML='<div class="empty"><div class="ei">✅</div><p>Nessun lotto prodotto</p></div>';return;}
+      el.innerHTML=allLots.map(([id,l])=>{
+        const days=daysSince(id);const conf=l.physConf;
+        let cls='',statusHtml='';
+        if(conf){cls='ok';statusHtml=`<span class="bdg ${conf.result==='C'?'bdg-ok':'bdg-err'}">${conf.result==='C'?'✅ Conforme':'❌ Non Conforme'}</span> <span class="mini">${fmtDate(conf.date)}</span>`;}
+        else if(days<4){cls='';statusHtml=`<span class="bdg bdg-gray">In attesa (giorno ${days})</span>`;}
+        else if(days<=5){cls='warning';statusHtml=`<span class="bdg bdg-warn">⚠ Da inserire ora! (giorno ${days})</span>`;}
+        else{cls='urgent';statusHtml=`<span class="bdg bdg-err">❌ Scaduta (giorno ${days})</span>`;}
+        return`<div class="conf-lot-card ${cls}">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+            <div><b>Lotto ${isoToLot(id)}</b> <span class="mini">(giorno ${days} – ${l.forms} forme)</span></div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${statusHtml}
+              <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','fis')">${conf?'✏ Modifica':'+ Inserisci'}</button>
+            </div>
+          </div>
+          ${conf&&conf.notes?`<div class="mini" style="margin-top:4px">Note: ${conf.notes}</div>`:''}
+        </div>`;
+      }).join('');
+    } else if(tab==='organolettiche'){
+      const eligible=allLots.filter(([id])=>(_db.sales[id]||[]).some(s=>s.type==='autoconsumo'||s.type==='assaggi'));
+      if(!eligible.length){el.innerHTML='<div class="alert alert-i">Le conformità organolettiche richiedono almeno una uscita autoconsumo/assaggi per quel lotto. Nessun lotto idoneo al momento.</div>';return;}
+      el.innerHTML=eligible.map(([id,l])=>{
+        const days=daysSince(id);const conf=l.orgConf;
+        const statusHtml=conf?`<span class="bdg ${conf.result==='C'?'bdg-ok':'bdg-err'}">${conf.result==='C'?'✅ Conforme':'❌ Non Conforme'}</span> <span class="mini">${fmtDate(conf.date)}</span>`:`<span class="bdg bdg-gray">Non inserita</span>`;
+        return`<div class="conf-lot-card ${conf?'ok':''}">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+            <div><b>Lotto ${isoToLot(id)}</b> <span class="mini">(giorno ${days})</span></div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${statusHtml}
+              <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','org')">${conf?'✏ Modifica':'+ Inserisci'}</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      el.innerHTML=`<div class="alert alert-i">Analisi chimiche ~2×/anno in laboratorio. Se NC il lotto è bloccato per la vendita DOP.</div>`;
+      el.innerHTML+=allLots.map(([id,l])=>{
+        const conf=l.chemConf;const days=daysSince(id);
+        const statusHtml=conf?`<span class="bdg ${conf.result==='C'?'bdg-ok':'bdg-err'}">${conf.result==='C'?'✅ Conforme':'❌ Non Conforme'}</span> <span class="mini">${fmtDate(conf.date)}</span>`:`<span class="bdg bdg-gray">Non rilevata</span>`;
+        return`<div class="conf-lot-card ${conf&&conf.result==='NC'?'urgent':conf?'ok':''}">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+            <div><b>Lotto ${isoToLot(id)}</b> <span class="mini">(giorno ${days})</span></div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${statusHtml}
+              <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','chim')">${conf?'✏ Modifica':'+ Inserisci'}</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+};
+
+/* ── ANALISI LATTE ── */
+const Analisi={
+  curTab:'inserisci',
+  _charts:{},
+  showTab(tab,btn){
+    Analisi.curTab=tab;
+    ['inserisci','storico','grafici'].forEach(t=>document.getElementById(`analisi-tab-${t}`).style.display=t===tab?'block':'none');
+    document.querySelectorAll('#sec-analisi .tab-btn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');Analisi.renderTab(tab);
+  },
+  render(){Alerts.renderAnalisi();Analisi.renderTab(Analisi.curTab);},
+  renderTab(tab){
+    if(tab==='inserisci')Analisi.renderInsert();
+    else if(tab==='storico')Analisi.renderStorico();
+    else Analisi.renderGrafici();
+  },
+  renderInsert(){
+    document.getElementById('analisi-tab-inserisci').innerHTML=`
+      <div class="card">
+        <div class="card-hd"><div class="card-title">➕ Nuova registrazione</div>
+          <button class="btn btn-p btn-sm" onclick="Analisi.openNew()">+ Aggiungi</button>
+        </div>
+        <p class="mini">Registra i litri di latte giornalieri <b>oppure</b> i risultati completi delle analisi di laboratorio (ogni ~2 settimane).</p>
+      </div>`;
+  },
+  renderStorico(){
+    const el=document.getElementById('analisi-tab-storico');
+    const items=Object.values(_db.milkAnalysis||{}).sort((a,b)=>b.date.localeCompare(a.date));
+    if(!items.length){el.innerHTML='<div class="empty"><div class="ei">🔬</div><p>Nessuna analisi registrata</p></div>';return;}
+    el.innerHTML=`<div class="card"><div class="tw"><table>
+      <thead><tr><th>Data</th><th>Tipo</th><th>Litri</th><th>Grasso%</th><th>Prot.%</th><th>Latt.%</th><th>Cas.%</th><th>Ind.Cas.</th><th>CS×1000</th><th>CB UFC</th><th></th></tr></thead>
+      <tbody>${items.map(a=>`<tr>
+        <td>${fmtDate(a.date)}</td>
+        <td>${a.type==='lab'?'<span class="bdg bdg-blue">Lab</span>':'<span class="bdg bdg-gray">Giorn.</span>'}</td>
+        <td>${a.liters||'—'}</td><td>${a.fat||'—'}</td><td>${a.proteins||'—'}</td><td>${a.lactose||'—'}</td>
+        <td>${a.caseins||'—'}</td><td>${a.caseinIndex||'—'}</td>
+        <td>${a.somaticCells||'—'}</td><td>${a.bacterialLoad||'—'}</td>
+        <td><button class="btn btn-d btn-xs" onclick="Analisi.delete('${a.id}')">🗑</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div></div>`;
+  },
+  renderGrafici(){
+    const el=document.getElementById('analisi-tab-grafici');
+    const lab=Object.values(_db.milkAnalysis||{}).filter(a=>a.type==='lab').sort((a,b)=>a.date.localeCompare(b.date));
+    const all=Object.values(_db.milkAnalysis||{}).sort((a,b)=>a.date.localeCompare(b.date));
+    if(!lab.length&&!all.length){el.innerHTML='<div class="empty"><div class="ei">📈</div><p>Nessun dato disponibile. Inserisci delle analisi.</p></div>';return;}
+    el.innerHTML=`
+      <div class="card"><div class="card-title">📊 Parametri nel tempo (analisi lab)</div><div class="chart-wrap"><canvas id="chart-params"></canvas></div></div>
+      <div class="card"><div class="card-title">📊 Cellule somatiche</div><div class="chart-wrap"><canvas id="chart-cs"></canvas></div></div>
+      <div class="card"><div class="card-title">📊 Litri latte e resa formaggio</div><div class="chart-wrap"><canvas id="chart-resa"></canvas></div></div>
+    `;
+    setTimeout(()=>Analisi.buildCharts(lab,all),80);
+  },
+  buildCharts(lab,all){
+    Object.values(Analisi._charts).forEach(c=>{try{c.destroy()}catch{}});Analisi._charts={};
+    const labels=lab.map(a=>fmtDate(a.date));
+    if(document.getElementById('chart-params')&&lab.length){
+      Analisi._charts.params=new Chart(document.getElementById('chart-params'),{type:'line',data:{labels,datasets:[
+        {label:'Grasso %',data:lab.map(a=>a.fat),borderColor:'#E67E22',backgroundColor:'rgba(230,126,34,.1)',tension:.3},
+        {label:'Proteine %',data:lab.map(a=>a.proteins),borderColor:'#2D5016',backgroundColor:'rgba(45,80,22,.1)',tension:.3},
+        {label:'Lattosio %',data:lab.map(a=>a.lactose),borderColor:'#1D4ED8',backgroundColor:'rgba(29,78,216,.1)',tension:.3},
+        {label:'Caseine %',data:lab.map(a=>a.caseins),borderColor:'#7C3AED',backgroundColor:'rgba(124,58,237,.1)',tension:.3},
+      ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+    }
+    if(document.getElementById('chart-cs')&&lab.length){
+      Analisi._charts.cs=new Chart(document.getElementById('chart-cs'),{type:'bar',data:{labels,datasets:[{label:'Cellule somatiche (×1000/ml)',data:lab.map(a=>a.somaticCells),backgroundColor:'rgba(220,38,38,.6)',borderColor:'#DC2626',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}});
+    }
+    if(document.getElementById('chart-resa')){
+      const lotData=Object.entries(_db.production).sort((a,b)=>a[0].localeCompare(b[0]));
+      const litersMap={};all.forEach(a=>litersMap[a.date]=(litersMap[a.date]||0)+Number(a.liters||0));
+      const dates=[...new Set([...all.map(a=>a.date),...lotData.map(([id])=>id)])].sort();
+      const resaMap={};
+      lotData.forEach(([id,l])=>{if(litersMap[id]&&l.forms>0)resaMap[id]=((l.forms*0.31)/litersMap[id]*100).toFixed(2);});
+      Analisi._charts.resa=new Chart(document.getElementById('chart-resa'),{type:'line',data:{labels:dates.map(d=>fmtDate(d)),datasets:[
+        {label:'Litri latte',data:dates.map(d=>litersMap[d]||null),borderColor:'#1D4ED8',backgroundColor:'rgba(29,78,216,.1)',tension:.3,yAxisID:'y'},
+        {label:'Resa % (kg/litri)',data:dates.map(d=>resaMap[d]||null),borderColor:'#E67E22',backgroundColor:'rgba(230,126,34,.1)',tension:.3,yAxisID:'y1'},
+      ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{type:'linear',position:'left'},y1:{type:'linear',position:'right',grid:{drawOnChartArea:false}}}}});
+    }
+  },
+  openNew(){
+    document.getElementById('m-analisi-title').textContent='Nuova analisi latte';
+    document.getElementById('ma-edit-id').value='';
+    document.getElementById('ma-date').value=today();
+    document.getElementById('ma-type').value='daily';
+    document.getElementById('ma-liters').value='';
+    ['ma-fat','ma-prot','ma-lact','ma-cas','ma-ci','ma-sc','ma-bc','ma-note'].forEach(id=>document.getElementById(id).value='');
+    Analisi.onTypeChange();openModal('m-analisi');
+  },
+  onTypeChange(){
+    document.getElementById('ma-lab-fields').style.display=document.getElementById('ma-type').value==='lab'?'block':'none';
+  },
+  save(){
+    const date=document.getElementById('ma-date').value;
+    const type=document.getElementById('ma-type').value;
+    const liters=parseFloat(document.getElementById('ma-liters').value);
+    if(!date){toast('Inserisci la data','w');return;}
+    if(isNaN(liters)||liters<=0){toast('Inserisci i litri','w');return;}
+    if(!_db.milkAnalysis)_db.milkAnalysis={};
+    const id=document.getElementById('ma-edit-id').value||uuid();
+    const rec={id,date,type,liters,note:document.getElementById('ma-note').value};
+    if(type==='lab'){Object.assign(rec,{fat:parseFloat(document.getElementById('ma-fat').value)||null,proteins:parseFloat(document.getElementById('ma-prot').value)||null,lactose:parseFloat(document.getElementById('ma-lact').value)||null,caseins:parseFloat(document.getElementById('ma-cas').value)||null,caseinIndex:parseFloat(document.getElementById('ma-ci').value)||null,somaticCells:parseFloat(document.getElementById('ma-sc').value)||null,bacterialLoad:parseFloat(document.getElementById('ma-bc').value)||null});}
+    _db.milkAnalysis[id]=rec;
+    Store.saveNow();closeModal('m-analisi');Analisi.renderTab(Analisi.curTab);toast('Analisi salvata','s');
+  },
+  delete(id){confirm2('Eliminare questa analisi?',()=>{delete _db.milkAnalysis[id];Store.saveNow();Analisi.renderTab(Analisi.curTab);toast('Eliminata','w');})}
+};
+
+/* ── UNIVERSAL SEARCH ── */
+const Search={
+  _results:[],
+  run(q){
+    q=(q||'').trim();if(!q){toast('Inserisci qualcosa da cercare','w');return;}
+    const results=[];
+    // Bollino (4 digits)
+    if(/^\d{4}$/.test(q)){
+      Object.entries(_db.bollini||{}).filter(([id])=>id.startsWith('MB'+q)).forEach(([bid,b])=>{
+        results.push({type:'bollino',label:`Bollino ${bid}`,sub:`${b.used?'Usato – Lotto '+isoToLot(b.lotId||''):'Disponibile'}`,action:()=>{closeModal('m-search');Router.go('bollini');}});
+      });
+    }
+    // Lotto
+    Object.entries(_db.production).forEach(([id,l])=>{
+      if(isoToLot(id)===q||id===q||isoToLot(id).includes(q)){
+        results.push({type:'lotto',label:`Lotto ${isoToLot(id)}`,sub:`${l.forms} forme – Rimanenza: ${Mag.remaining(id)} – Giorno ${daysSince(id)}`,action:()=>{closeModal('m-search');Router.go('produzione');}});
+      }
+    });
+    // DDT
+    Object.entries(_db.ddt||{}).forEach(([id,d])=>{
+      if(id.toLowerCase().includes(q.toLowerCase())){
+        results.push({type:'ddt',label:`DDT ${id}`,sub:`${fmtDate(d.date)} – ${Clients.getName(d.clientId)} – ${fmtEuro(d.totaleDocumento||d.totalAmount||d.totaleDocumento||d.totalAmount)}`,action:()=>{closeModal('m-search');DDT.curYear=new Date(d.date).getFullYear();DDT.curMonth=new Date(d.date).getMonth();Router.go('ddt');}});
+      }
+    });
+    // Cliente
+    Object.entries(_db.clients||{}).forEach(([id,c])=>{
+      if(c.nome.toLowerCase().includes(q.toLowerCase())||c.piva?.includes(q)){
+        const ddts=Object.values(_db.ddt||{}).filter(d=>d.clientId===id).length;
+        results.push({type:'cliente',label:c.nome,sub:`P.IVA: ${c.piva||'—'} – ${ddts} DDT`,action:()=>{closeModal('m-search');Router.go('clienti');}});
+      }
+    });
+    // Date in sales
+    if(/\d{2}\/\d{2}\/\d{4}/.test(q)){
+      const iso=q.split('/').reverse().join('-');
+      Object.entries(_db.sales||{}).forEach(([lid,slist])=>{
+        slist.filter(s=>s.date===iso).forEach(s=>{
+          results.push({type:'vendita',label:`Vendita ${fmtDate(s.date)}`,sub:`Lotto ${isoToLot(lid)} – ${s.type} – ${s.qty} forme`,action:()=>{closeModal('m-search');Router.go('vendite');}});
+        });
+      });
+    }
+    const icons={bollino:'🏷',lotto:'🏭',ddt:'📄',cliente:'👥',vendita:'💰'};
+    if(!results.length){document.getElementById('m-search-body').innerHTML='<div class="alert alert-w">Nessun risultato per "'+q+'".</div>';openModal('m-search');return;}
+    document.getElementById('m-search-body').innerHTML=`<p class="mini" style="margin-bottom:8px">${results.length} risultat${results.length===1?'o':'i'} per "<b>${q}</b>"</p>`+
+      results.map((r,i)=>`<div class="search-result-item" onclick="Search._results[${i}].action()">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:1.1rem">${icons[r.type]||'🔍'}</span>
+          <div><div style="font-weight:600;font-size:.88rem">${r.label}</div><div class="mini">${r.sub}</div></div>
+        </div>
+      </div>`).join('');
+    Search._results=results;openModal('m-search');
+  }
+};
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded',()=>{
+  PWA.init();
+  App.init();
+  // Load test data if test mode and empty
+  if(_mode==='test' && Object.keys(_db.production).length===0) TestData.load();
+});
+</script>
+</body>
+</html>
