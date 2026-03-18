@@ -1763,13 +1763,13 @@ const DDT = {
     document.getElementById('md-date').value=today();
     document.getElementById('md-mytel').value=_db.settings.myPhone||_db.settings.azienda.telefono||'';
     document.getElementById('md-causale').value='Cessione a titolo oneroso';
-    document.getElementById('md-total').value='';
     document.getElementById('md-note').value='';
     document.getElementById('md-client').value='';
     document.getElementById('md-client-preview').style.display='none';
     DDT.loadClients();
     document.getElementById('md-rows').innerHTML='';
     DDT.addRow();
+    DDT.recalc();
     openModal('m-ddt');
   },
   openEdit(id){
@@ -1782,7 +1782,6 @@ const DDT = {
       document.getElementById('md-date').value=d.date;
       document.getElementById('md-mytel').value=d.myPhone||'';
       document.getElementById('md-causale').value=d.causale||'';
-      document.getElementById('md-total').value=d.totaleDocumento||d.totalAmount||'';
       document.getElementById('md-note').value=d.note||'';
       DDT.loadClients();
       document.getElementById('md-client').value=d.clientId||'';
