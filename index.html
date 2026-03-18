@@ -1451,20 +1451,22 @@ const Sales = {
     </div>`;
   },
   renderSaleRow(lid,s){
-    const typeMap={dop:'<span class="bdg bdg-dop">DOP</span>',nondop:'<span class="bdg bdg-nd">Non DOP</span>',autoconsumo:'<span class="bdg bdg-auto">Auto</span>'};
+    const typeMap={dop:'<span class="bdg bdg-dop">DOP</span>',nondop:'<span class="bdg bdg-nd">Non DOP</span>',autoconsumo:'<span class="bdg bdg-auto">Auto</span>',assaggi:'<span class="bdg bdg-auto">Assaggi</span>'};
     const bollini=(s.bollini||[]).map(b=>`<span class="bdg bdg-amber">${b}</span>`).join(' ');
     const rif=s.ddtId||s.ndRef||s.scontrinoDate||'—';
-    return `<tr>
+    const isFromDDT=!!s._fromDDT;
+    const deleteBtn=isFromDDT
+      ?`<span class="mini" style="color:var(--txt-3)" title="Uscita generata da DDT ${s._fromDDT} — elimina il DDT per rimuoverla">📄 ${s._fromDDT}</span>`
+      :`<button class="btn btn-d btn-xs" onclick="Sales.deleteSale('${lid}','${s.id}')">🗑</button>`;
+    return `<tr${isFromDDT?' style="background:rgba(45,80,22,.03)"':''}>
       <td>${fmtDate(s.date)}</td>
-      <td>${typeMap[s.type]||s.type}</td>
+      <td>${typeMap[s.type]||s.type}${isFromDDT?' <span class="bdg bdg-blue" style="font-size:.6rem">DDT</span>':''}</td>
       <td><b>${s.qty}</b></td>
       <td>${bollini||'—'}</td>
       <td><span class="mini">${s.method||'—'}</span></td>
       <td><span class="mini">${rif}</span></td>
-      <td><span class="mini">${s.note||''}</span></td>
-      <td>
-        <button class="btn btn-d btn-xs" onclick="Sales.deleteSale('${lid}','${s.id}')">🗑</button>
-      </td>
+      <td><span class="mini">${isFromDDT?'':''}${s.note||''}</span></td>
+      <td>${deleteBtn}</td>
     </tr>`;
   },
   toggleBlock(id){
@@ -1814,6 +1816,8 @@ const DDT = {
     div.className='card';
     div.style.marginBottom='8px';
     div.style.padding='10px';
+    const descMap={'Roccaverano DOP fresco':'dop-fresco','Roccaverano DOP affinato':'dop-affinato','Robiola del Merlo Bianco':'nondop'};
+    const selVal=descMap[data.desc]||(data.desc?'custom':'');
     div.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-weight:600;font-size:.82rem">Riga ${idx+1}</span>
@@ -1821,34 +1825,93 @@ const DDT = {
       </div>
       <div class="frow">
         <div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="${data.qty||1}" placeholder="1" oninput="DDT.recalc()"></div>
-        <div class="fg" style="flex:2"><label class="fl">Descrizione</label>
+        <div class="fg" style="flex:2"><label class="fl">Descrizione prodotto</label>
           <select class="fc fc-sm" onchange="DDT.onDescChange(this)">
             <option value="">-- Seleziona --</option>
-            <option value="dop-fresco" ${data.desc==='Roccaverano DOP fresco'?'selected':''}>Roccaverano DOP fresco</option>
-            <option value="dop-affinato" ${data.desc==='Roccaverano DOP affinato'?'selected':''}>Roccaverano DOP affinato</option>
-            <option value="nondop" ${data.desc==='Robiola del Merlo Bianco'?'selected':''}>Robiola del Merlo Bianco</option>
-            <option value="custom" ${data.desc&&!['Roccaverano DOP fresco','Roccaverano DOP affinato','Robiola del Merlo Bianco'].includes(data.desc)?'selected':''}>Altro (manuale)</option>
+            <option value="dop-fresco" ${selVal==='dop-fresco'?'selected':''}>Roccaverano DOP fresco</option>
+            <option value="dop-affinato" ${selVal==='dop-affinato'?'selected':''}>Roccaverano DOP affinato</option>
+            <option value="nondop" ${selVal==='nondop'?'selected':''}>Robiola del Merlo Bianco</option>
+            <option value="custom" ${selVal==='custom'?'selected':''}>Altro (manuale)</option>
           </select>
           <input type="text" class="fc fc-sm" style="margin-top:4px" placeholder="Descrizione libera" value="${data.desc||''}" data-desc-free>
         </div>
       </div>
       <div class="frow">
-        <div class="fg"><label class="fl">Lotto</label><input type="text" class="fc fc-sm" placeholder="DD/MM/YYYY" value="${data.lot||''}"></div>
-        <div class="fg"><label class="fl">N° Bollino</label><input type="text" class="fc fc-sm" placeholder="MB0001/24" value="${data.bollino||''}"></div>
+        <div class="fg" style="flex:2">
+          <label class="fl">Lotto (filtra per tipo)</label>
+          <select class="fc fc-sm" data-lot-sel onchange="DDT.onLotSelect(this)">
+            <option value="">-- Scegli lotto --</option>
+          </select>
+          <input type="text" class="fc fc-sm" style="margin-top:4px;display:none" placeholder="DD/MM/YYYY (manuale)" value="${data.lot||''}" data-lot-input>
+        </div>
+        <div class="fg"><label class="fl">N° Bollini</label><input type="text" class="fc fc-sm" placeholder="MB0001/24 MB0002/24" value="${data.bollino||''}"></div>
         <div class="fg"><label class="fl">Prezzo tot. (IVA incl.)</label><input type="number" class="fc fc-sm" step="0.01" placeholder="0.00" value="${data.unitPrice||''}" oninput="DDT.recalc()"></div>
       </div>
     `;
     container.appendChild(div);
-    // Trigger desc display
-    const sel=div.querySelector('select');
-    if(data.desc) DDT.onDescChange(sel);
+    // Trigger desc e popola lotti
+    const descSel=div.querySelector('select');
+    if(data.desc) DDT.onDescChange(descSel);
+    else DDT.populateLotSelect(div.querySelector('[data-lot-sel]'),'');
+    // Se c'era già un lotto, mostralo nel campo manuale
+    if(data.lot){
+      const li=div.querySelector('[data-lot-input]');
+      if(li){ li.style.display='block'; }
+    }
+  },
+  populateLotSelect(sel, type){
+    if(!sel) return;
+    sel.innerHTML='<option value="">-- Scegli lotto --</option>';
+    const lots=Object.entries(_db.production)
+      .filter(([id])=>Mag.remaining(id)>0)
+      .sort((a,b)=>b[0].localeCompare(a[0]));
+    lots.forEach(([id,l])=>{
+      const days=daysSince(id);
+      const isFresco=days>=5&&days<=9;
+      const isAffinato=days>=10;
+      if(type==='fresco'&&!isFresco) return;
+      if(type==='affinato'&&!isAffinato) return;
+      const stato=days<5?'non DOP':isFresco?'fresco':'affinato';
+      const rem=Mag.remaining(id);
+      const opt=document.createElement('option');
+      opt.value=isoToLot(id);
+      opt.textContent=isoToLot(id)+'  ('+stato+', '+rem+' disp., g.'+days+')';
+      sel.appendChild(opt);
+    });
+    const manOpt=document.createElement('option');
+    manOpt.value='__manual__';
+    manOpt.textContent='✏ Inserisci manualmente';
+    sel.appendChild(manOpt);
+  },
+  onLotSelect(sel){
+    const row=sel.closest('.card');
+    const input=row.querySelector('[data-lot-input]');
+    if(!input) return;
+    if(sel.value==='__manual__'){
+      input.style.display='block';
+      input.value='';
+      input.focus();
+    } else if(sel.value){
+      input.value=sel.value;
+      input.style.display='none';
+    } else {
+      input.value='';
+      input.style.display='none';
+    }
   },
   onDescChange(sel){
-    const free=sel.parentElement.querySelector('[data-desc-free]');
+    const row=sel.closest('.card');
+    const free=row.querySelector('[data-desc-free]');
+    const lotSel=row.querySelector('[data-lot-sel]');
     if(!free) return;
     const map={'dop-fresco':'Roccaverano DOP fresco','dop-affinato':'Roccaverano DOP affinato','nondop':'Robiola del Merlo Bianco'};
     if(sel.value&&sel.value!=='custom'){ free.value=map[sel.value]||''; free.readOnly=true; }
     else { free.readOnly=false; }
+    // Filtra i lotti in base al tipo scelto e resetta selezione
+    const typeMap={'dop-fresco':'fresco','dop-affinato':'affinato','nondop':'','custom':'','':''};
+    DDT.populateLotSelect(lotSel, typeMap[sel.value]||'');
+    const input=row.querySelector('[data-lot-input]');
+    if(input){ input.value=''; input.style.display='none'; }
   },
   recalc(){
     let impon=0;
@@ -1860,6 +1923,59 @@ const DDT = {
     const tt=document.getElementById('md-totale');
     if(tt)tt.textContent=fmtEuro(impon);
   },
+  // Registra automaticamente le uscite nel registro vendite dalle righe del DDT
+  _autoRegisterSales(ddtId, ddtDate, rows){
+    // Rimuovi prima eventuali uscite già auto-registrate da questo DDT
+    DDT._removeSalesFromDDT(ddtId);
+    rows.forEach(row=>{
+      if(!row.lot||!row.qty) return;
+      // Converti lotto da DD/MM/YYYY a ISO
+      const parts=row.lot.split('/');
+      if(parts.length!==3) return;
+      const lotId=`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+      if(!_db.production[lotId]){
+        toast(`⚠ Lotto ${row.lot} non trovato in produzione — uscita non registrata automaticamente`,'w');
+        return;
+      }
+      // Determina tipo vendita dalla descrizione
+      const desc=(row.desc||'').toLowerCase();
+      const isDOP=desc.includes('dop')||desc.includes('roccaverano');
+      const type=isDOP?'dop':'nondop';
+      // Bollini: prendi quelli dalla riga (separati da spazio)
+      const bollini=isDOP?(row.bollino||'').split(/\s+/).filter(b=>b.startsWith('MB')):[];
+      // Marca bollini come usati
+      bollini.forEach(b=>{
+        if(!_db.bollini[b]) _db.bollini[b]={id:b,used:false};
+        _db.bollini[b].used=true;
+        _db.bollini[b].usedDate=ddtDate;
+        _db.bollini[b].lotId=lotId;
+      });
+      const sale={
+        id:uuid(),
+        date:ddtDate,
+        type,
+        qty:Number(row.qty),
+        bollini:isDOP?bollini:[],
+        method:'ddt',
+        ddtId,
+        note:'(auto da DDT)',
+        _fromDDT:ddtId  // marker per identificare uscite auto-generate
+      };
+      if(!_db.sales[lotId]) _db.sales[lotId]=[];
+      _db.sales[lotId].push(sale);
+    });
+  },
+  // Rimuove le uscite auto-generate da un DDT (usato su modifica/eliminazione)
+  _removeSalesFromDDT(ddtId){
+    Object.keys(_db.sales||{}).forEach(lotId=>{
+      const toRemove=(_db.sales[lotId]||[]).filter(s=>s._fromDDT===ddtId);
+      // Libera i bollini associati
+      toRemove.forEach(s=>(s.bollini||[]).forEach(b=>{
+        if(_db.bollini[b]){_db.bollini[b].used=false;_db.bollini[b].usedDate=null;_db.bollini[b].lotId=null;}
+      }));
+      _db.sales[lotId]=(_db.sales[lotId]||[]).filter(s=>s._fromDDT!==ddtId);
+    });
+  },
   save(){
     const editId=document.getElementById('md-edit-id').value;
     const num=document.getElementById('md-num').value.trim();
@@ -1868,12 +1984,17 @@ const DDT = {
     if(!num||!date||!clientId){toast('Compila numero DDT, data e cliente','w');return;}
     const rows=[];
     document.querySelectorAll('#md-rows .card').forEach(row=>{
-      const inputs=row.querySelectorAll('input');
-      const qty=parseInt(inputs[0].value)||1;
+      const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
       const desc=row.querySelector('[data-desc-free]')?.value||'';
-      const lot=inputs[2]?.value||'';
-      const bollino=inputs[3]?.value||'';
-      const unitPrice=parseFloat(inputs[4]?.value)||0;
+      // Lotto: prendi dal campo manuale se visibile, altrimenti dal select
+      const lotInput=row.querySelector('[data-lot-input]');
+      const lotSel=row.querySelector('[data-lot-sel]');
+      const lot=(lotInput&&lotInput.style.display!=='none'&&lotInput.value)
+        ? lotInput.value
+        : (lotSel&&lotSel.value&&lotSel.value!=='__manual__'?lotSel.value:'');
+      const textInputs=row.querySelectorAll('input[type=text]');
+      const bollino=textInputs[textInputs.length-1]?.value||'';
+      const unitPrice=parseFloat(row.querySelectorAll('input[type=number]')[1]?.value)||0;
       rows.push({qty,desc,lot,bollino,unitPrice,totalPrice:(qty*unitPrice)});
     });
     const totaleDocumento=rows.reduce((s,r)=>s+r.totalPrice,0);
@@ -1892,17 +2013,20 @@ const DDT = {
       _db.settings.nextDDT=(_db.settings.nextDDT||1)+1;
     }
     _db.ddt[num]=ddt;
+    // Auto-registra le uscite nel registro vendite
+    DDT._autoRegisterSales(num, date, rows);
     Store.saveNow();
     closeModal('m-ddt');
     DDT.render();
-    toast(`DDT ${num} salvato`,'s');
+    toast(`DDT ${num} salvato — uscite registrate automaticamente in Vendite`,'s');
   },
   deleteDDT(id){
-    confirm2(`Eliminare il DDT ${id}?`,()=>{
+    confirm2(`Eliminare il DDT ${id}? Verranno rimosse anche le uscite auto-registrate in Vendite.`,()=>{
+      DDT._removeSalesFromDDT(id);
       delete _db.ddt[id];
       Store.saveNow();
       DDT.render();
-      toast('DDT eliminato','w');
+      toast('DDT eliminato e uscite rimosse','w');
     });
   },
   generatePDF(id){
