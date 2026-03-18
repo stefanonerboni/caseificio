@@ -273,7 +273,6 @@ select.fc option{font-family:var(--ff)}
     <div class="sv-sep"></div>
     <button class="sv-item" data-sec="bollini"><span class="ni">🏷</span> Bollini</button>
     <button class="sv-item" data-sec="ddt"><span class="ni">📄</span> DDT</button>
-    <button class="sv-item" data-sec="vendita-diretta"><span class="ni">🧾</span> Vendita Diretta</button>
     <button class="sv-item" data-sec="clienti"><span class="ni">👥</span> Clienti</button>
     <div class="sv-sep"></div>
     <button class="sv-item" data-sec="analisi"><span class="ni">🔬</span> Analisi Latte</button>
@@ -340,8 +339,7 @@ select.fc option{font-family:var(--ff)}
       <div id="analisi-tab-grafici" style="display:none"></div>
     </section>
     <section class="sec" id="sec-vendite">
-      <div class="sec-title">💰 Registro Uscite</div>
-      <div class="alert alert-i" style="margin-bottom:10px">Qui puoi registrare <b>autoconsumo</b> e <b>assaggi</b>. Per vendite con scontrino usa 🧾 <b>Vendita Diretta</b>, per DDT usa 📄 <b>DDT</b>.</div>
+      <div class="sec-title">💰 Registro Vendite</div>
       <div class="mnav">
         <button onclick="Sales.prevMonth()">‹</button>
         <div class="mlbl" id="sales-month-label"></div>
@@ -391,38 +389,7 @@ select.fc option{font-family:var(--ff)}
       </div>
     </section>
 
-    <!-- ════ VENDITA DIRETTA (SCONTRINO) ════ -->
-    <section class="sec" id="sec-vendita-diretta">
-      <div class="sec-title">🧾 Vendita Diretta / Scontrino</div>
-      <div class="alert alert-i">Registra vendite con scontrino o ricevuta. Le uscite vengono auto-registrate nel registro vendite.</div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Nuova vendita diretta</div></div>
-        <div class="frow">
-          <div class="fg"><label class="fl">Data vendita *</label><input type="date" class="fc" id="vd-date"></div>
-          <div class="fg"><label class="fl">N° Scontrino / Ricevuta</label><input type="text" class="fc" id="vd-ref" placeholder="es. 0042 oppure libero"></div>
-        </div>
-        <div id="vd-rows"></div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="VD.addRow()">+ Aggiungi riga</button>
-        <hr class="sep">
-        <div class="iva-box" style="margin-bottom:10px">
-          <div class="iva-row total"><span>TOTALE (IVA inclusa)</span><span id="vd-totale">0,00 €</span></div>
-        </div>
-        <div class="fg"><label class="fl">Note</label><textarea class="fc" id="vd-note" rows="2"></textarea></div>
-        <div style="margin-top:4px">
-          <button class="btn btn-p" onclick="VD.save()">💾 Registra vendita</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">📋 Storico vendite dirette</div>
-          <div class="mnav" style="margin:0;box-shadow:none;padding:0;background:none">
-            <button onclick="VD.prevMonth()">‹</button>
-            <div class="mlbl" id="vd-month-label" style="min-width:120px"></div>
-            <button onclick="VD.nextMonth()">›</button>
-          </div>
-        </div>
-        <div id="vd-list"></div>
-      </div>
-    </section>
+    <!-- ════ CLIENTI ════ -->
     <section class="sec" id="sec-clienti">
       <div class="sec-title">👥 Clienti</div>
       <div class="card">
@@ -524,10 +491,10 @@ select.fc option{font-family:var(--ff)}
   <button class="nv on" data-sec="dashboard"><span class="ni">🏠</span><span>Home</span></button>
   <button class="nv" data-sec="produzione"><span class="ni">🏭</span><span>Prod.</span></button>
   <button class="nv" data-sec="conformita"><span class="ni">✅</span><span>Conf.</span></button>
-  <button class="nv" data-sec="ddt"><span class="ni">📄</span><span>DDT</span></button>
-  <button class="nv" data-sec="vendita-diretta"><span class="ni">🧾</span><span>Scontrino</span></button>
-  <button class="nv" data-sec="vendite"><span class="ni">💰</span><span>Registro</span></button>
+  <button class="nv" data-sec="vendite"><span class="ni">💰</span><span>Vendite</span></button>
   <button class="nv" data-sec="bollini"><span class="ni">🏷</span><span>Bollini</span></button>
+  <button class="nv" data-sec="ddt"><span class="ni">📄</span><span>DDT</span></button>
+  <button class="nv" data-sec="analisi"><span class="ni">🔬</span><span>Analisi</span></button>
   <button class="nv" data-sec="report"><span class="ni">📊</span><span>Report</span></button>
 </nav>
 
@@ -620,9 +587,10 @@ select.fc option{font-family:var(--ff)}
           <label class="fl">Tipologia *</label>
           <select class="fc" id="ms-type" onchange="Sales.onTypeChange()">
             <option value="">-- Seleziona --</option>
+            <option value="dop">🏅 DOP</option>
+            <option value="nondop">📦 Non DOP</option>
             <option value="autoconsumo">🧑‍🍳 Autoconsumo</option>
             <option value="assaggi">👅 Assaggi</option>
-            <option value="eliminazione">🗑 Eliminazione (non conforme / problemi)</option>
           </select>
         </div>
       </div>
@@ -892,7 +860,7 @@ function emptyDB(){
     bollini:{},
     ddt:{},
     clients:{},
-    milkAnalysis:{},venditeDirecte:{}
+    milkAnalysis:{}
   };
 }
 
@@ -968,7 +936,6 @@ const Router = {
     else if(sec==='ddt') DDT.render();
     else if(sec==='clienti') Clients.render();
     else if(sec==='analisi') Analisi.render();
-    else if(sec==='vendita-diretta') VD.render();
     else if(sec==='report') Report.init();
     else if(sec==='impostazioni') Settings.render();
   }
@@ -1457,8 +1424,7 @@ const Sales = {
     const rem=Mag.remaining(id);
     const dopSold=slist.filter(s=>s.type==='dop').reduce((s,x)=>s+Number(x.qty||0),0);
     const ndSold=slist.filter(s=>s.type==='nondop').reduce((s,x)=>s+Number(x.qty||0),0);
-    const autoSold=slist.filter(s=>s.type==='autoconsumo'||s.type==='assaggi').reduce((s,x)=>s+Number(x.qty||0),0);
-    const elimSold=slist.filter(s=>s.type==='eliminazione').reduce((s,x)=>s+Number(x.qty||0),0);
+    const autoSold=slist.filter(s=>s.type==='autoconsumo').reduce((s,x)=>s+Number(x.qty||0),0);
     const pct=forms>0?Math.round(((forms-rem)/forms)*100):0;
     return `<div class="lot-block">
       <div class="lot-block-hd" onclick="Sales.toggleBlock('${id}')">
@@ -1468,11 +1434,10 @@ const Sales = {
         </div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <span class="bdg bdg-dop">DOP: ${dopSold}</span>
-          <span class="bdg bdg-nd">ND: ${ndSold}</span>
+          <span class="bdg bdg-nd">Non DOP: ${ndSold}</span>
           <span class="bdg bdg-auto">Auto: ${autoSold}</span>
-          ${elimSold?`<span class="bdg bdg-err">Elim: ${elimSold}</span>`:''}
           <span class="bdg bdg-ok">Rim: ${rem}/${forms}</span>
-          <button class="btn btn-a btn-xs" onclick="event.stopPropagation();Sales.openAdd('${id}')">🧑‍🍳 Auto/Assaggi</button>
+          <button class="btn btn-a btn-xs" onclick="event.stopPropagation();Sales.openAdd('${id}')">+ Uscita</button>
         </div>
       </div>
       <div class="lot-block-bd" id="lb-${id}">
@@ -1486,7 +1451,7 @@ const Sales = {
     </div>`;
   },
   renderSaleRow(lid,s){
-    const typeMap={dop:'<span class="bdg bdg-dop">DOP</span>',nondop:'<span class="bdg bdg-nd">Non DOP</span>',autoconsumo:'<span class="bdg bdg-auto">Auto</span>',assaggi:'<span class="bdg bdg-auto">Assaggi</span>',eliminazione:'<span class="bdg bdg-err">🗑 Elim.</span>'};
+    const typeMap={dop:'<span class="bdg bdg-dop">DOP</span>',nondop:'<span class="bdg bdg-nd">Non DOP</span>',autoconsumo:'<span class="bdg bdg-auto">Auto</span>',assaggi:'<span class="bdg bdg-auto">Assaggi</span>'};
     const bollini=(s.bollini||[]).map(b=>`<span class="bdg bdg-amber">${b}</span>`).join(' ');
     const rif=s.ddtId||s.ndRef||s.scontrinoDate||'—';
     const isFromDDT=!!s._fromDDT;
@@ -1789,15 +1754,8 @@ const DDT = {
     </table>`;
   },
   nextNumber(){
-    const yr=String(YEAR).slice(-2);
-    // Se ci sono numeri "liberati" (DDT eliminati) usali per primi
-    if(!_db.settings.freedDDT) _db.settings.freedDDT=[];
-    const freed=(_db.settings.freedDDT||[]).filter(n=>String(n).endsWith('/'+yr));
-    if(freed.length){
-      freed.sort();
-      return freed[0]; // restituisce il primo numero libero
-    }
     const n=_db.settings.nextDDT||1;
+    const yr=String(YEAR).slice(-2);
     return `${pad2(n)}C/${yr}`;
   },
   openNew(){
@@ -1866,7 +1824,7 @@ const DDT = {
         <button class="btn btn-d btn-xs" onclick="this.closest('.card').remove();DDT.recalc()">🗑</button>
       </div>
       <div class="frow">
-        <div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="${data.qty||1}" placeholder="1" oninput="DDT.recalc();DDT._updateBollinoSug(this.closest('.card'))"></div>
+        <div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="${data.qty||1}" placeholder="1" oninput="DDT.recalc()"></div>
         <div class="fg" style="flex:2"><label class="fl">Descrizione prodotto</label>
           <select class="fc fc-sm" onchange="DDT.onDescChange(this)">
             <option value="">-- Seleziona --</option>
@@ -1886,16 +1844,7 @@ const DDT = {
           </select>
           <input type="text" class="fc fc-sm" style="margin-top:4px;display:none" placeholder="DD/MM/YYYY (manuale)" value="${data.lot||''}" data-lot-input>
         </div>
-        <div class="fg"><label class="fl">N° Bollini</label><input type="text" class="fc fc-sm" placeholder="MB0001/24 MB0002/24" value="${data.bollino||''}" data-bollino-plain style="${(selVal==='dop-fresco'||selVal==='dop-affinato')?'display:none':''}"></div>
-        <div class="fg" data-bollini-section style="display:${(selVal==='dop-fresco'||selVal==='dop-affinato')?'block':'none'}">
-          <label class="fl">Bollini DOP <span data-bollini-counter class="mini" style="color:var(--warn)"></span></label>
-          <div data-bollini-tags class="pill-row" style="min-height:30px;margin-bottom:4px;flex-wrap:wrap;gap:4px"></div>
-          <div data-bollini-sug class="pill-row" style="margin-bottom:4px"></div>
-          <div class="input-group">
-            <input type="text" class="fc fc-sm" data-bollini-input placeholder="4 cifre" maxlength="4">
-            <button class="btn btn-p btn-sm" onclick="DDT._addBollinoToRow(this.closest('.card'))">+</button>
-          </div>
-        </div>
+        <div class="fg"><label class="fl">N° Bollini</label><input type="text" class="fc fc-sm" placeholder="MB0001/24 MB0002/24" value="${data.bollino||''}"></div>
         <div class="fg"><label class="fl">Prezzo tot. (IVA incl.)</label><input type="number" class="fc fc-sm" step="0.01" placeholder="0.00" value="${data.unitPrice||''}" oninput="DDT.recalc()"></div>
       </div>
     `;
@@ -1956,53 +1905,13 @@ const DDT = {
     const lotSel=row.querySelector('[data-lot-sel]');
     if(!free) return;
     const map={'dop-fresco':'Roccaverano DOP fresco','dop-affinato':'Roccaverano DOP affinato','nondop':'Robiola del Merlo Bianco'};
+    if(sel.value&&sel.value!=='custom'){ free.value=map[sel.value]||''; free.readOnly=true; }
+    else { free.readOnly=false; }
+    // Filtra i lotti in base al tipo scelto e resetta selezione
     const typeMap={'dop-fresco':'fresco','dop-affinato':'affinato','nondop':'','custom':'','':''};
-    if(sel.value&&sel.value!=='custom'){free.value=map[sel.value]||'';free.readOnly=true;}
-    else{free.readOnly=false;}
-    DDT.populateLotSelect(lotSel,typeMap[sel.value]||'');
+    DDT.populateLotSelect(lotSel, typeMap[sel.value]||'');
     const input=row.querySelector('[data-lot-input]');
-    if(input){input.value='';input.style.display='none';}
-    // Mostra/nasconde sezione bollini DOP
-    const isDOP=sel.value==='dop-fresco'||sel.value==='dop-affinato';
-    const bolSec=row.querySelector('[data-bollini-section]');
-    const bolPlain=row.querySelector('[data-bollino-plain]');
-    if(bolSec)bolSec.style.display=isDOP?'block':'none';
-    if(bolPlain)bolPlain.style.display=isDOP?'none':'block';
-    if(isDOP)DDT._updateBollinoSug(row);
-  },
-  _updateBollinoSug(row){
-    const sug=row.querySelector('[data-bollini-sug]');if(!sug)return;
-    const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
-    const used=Array.from(row.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol);
-    const free=Object.entries(_db.bollini||{}).filter(([id,b])=>!b.used&&!used.includes(id)).sort((a,b)=>a[0].localeCompare(b[0])).slice(0,Math.max(qty,6));
-    sug.innerHTML=free.map(([id])=>`<button class="bollino-sug" onclick="DDT._addBollinoById('${id}',this.closest('.card'))">${id}</button>`).join('');
-    DDT._updateCounter(row);
-  },
-  _updateCounter(row){
-    const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
-    const added=row.querySelectorAll('[data-bol]').length;
-    const counter=row.querySelector('[data-bollini-counter]');
-    if(!counter)return;
-    if(added===qty){counter.textContent='✅ '+added+'/'+qty;counter.style.color='var(--ok)';}
-    else{counter.textContent=added+'/'+qty+' — servono ancora '+(qty-added);counter.style.color='var(--warn)';}
-  },
-  _addBollinoToRow(row){
-    const inp=row.querySelector('[data-bollini-input]');const val=inp.value.trim();
-    if(val.length!==4||isNaN(val)){toast('Inserisci 4 cifre','w');return;}
-    const matches=Object.keys(_db.bollini||{}).filter(id=>id.startsWith('MB'+val));
-    if(!matches.length){DDT._addBollinoById('MB'+val.padStart(4,'0')+'/'+String(YEAR).slice(-2),row,true);}
-    else if(matches.length===1){DDT._addBollinoById(matches[0],row);}
-    else{matches.forEach(m=>{if(confirm('Usare '+m+'?')){DDT._addBollinoById(m,row);return;}});}
-    inp.value='';
-  },
-  _addBollinoById(fullId,row,force=false){
-    const b=_db.bollini&&_db.bollini[fullId];
-    if(b&&b.used&&!force){toast('Bollino '+fullId+' già usato','e');return;}
-    const tags=row.querySelector('[data-bollini-tags]');
-    if(Array.from(tags.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol).includes(fullId)){toast('Già aggiunto','w');return;}
-    const tag=document.createElement('span');tag.className='tag';tag.dataset.bol=fullId;
-    tag.innerHTML=fullId+'<button class="tag-x" onclick="this.parentElement.remove();DDT._updateBollinoSug(this.closest(''+'.card'+''))">×</button>';
-    tags.appendChild(tag);DDT._updateBollinoSug(row);
+    if(input){ input.value=''; input.style.display='none'; }
   },
   recalc(){
     let impon=0;
@@ -2074,35 +1983,20 @@ const DDT = {
     const clientId=document.getElementById('md-client').value;
     if(!num||!date||!clientId){toast('Compila numero DDT, data e cliente','w');return;}
     const rows=[];
-    let hasError=false;
     document.querySelectorAll('#md-rows .card').forEach(row=>{
       const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
       const desc=row.querySelector('[data-desc-free]')?.value||'';
-      // Lotto: dal campo manuale se visibile, altrimenti dal select
+      // Lotto: prendi dal campo manuale se visibile, altrimenti dal select
       const lotInput=row.querySelector('[data-lot-input]');
       const lotSel=row.querySelector('[data-lot-sel]');
       const lot=(lotInput&&lotInput.style.display!=='none'&&lotInput.value)
         ? lotInput.value
         : (lotSel&&lotSel.value&&lotSel.value!=='__manual__'?lotSel.value:'');
-      // Bollini: da tag-selector per DOP, da campo testo per non-DOP
-      const isDOP=desc.toLowerCase().includes('dop')||desc.toLowerCase().includes('roccaverano');
-      let bollino='';
-      if(isDOP){
-        const tagEls=row.querySelectorAll('[data-bol]');
-        const bolliniArr=Array.from(tagEls).map(t=>t.dataset.bol);
-        if(bolliniArr.length!==qty){
-          toast(`Riga "${desc}": hai ${bolliniArr.length} bollini ma ${qty} forme — devono coincidere`,'e');
-          hasError=true;return;
-        }
-        bollino=bolliniArr.join(' ');
-      } else {
-        const plain=row.querySelector('[data-bollino-plain]');
-        bollino=plain?plain.value:'';
-      }
+      const textInputs=row.querySelectorAll('input[type=text]');
+      const bollino=textInputs[textInputs.length-1]?.value||'';
       const unitPrice=parseFloat(row.querySelectorAll('input[type=number]')[1]?.value)||0;
       rows.push({qty,desc,lot,bollino,unitPrice,totalPrice:(qty*unitPrice)});
     });
-    if(hasError) return;
     const totaleDocumento=rows.reduce((s,r)=>s+r.totalPrice,0);
     const ddt={
       id:num,
@@ -2116,11 +2010,7 @@ const DDT = {
     };
     if(!editId){
       if(_db.ddt[num]&&!confirm(`DDT ${num} già esistente. Sovrascrivere?`)) return;
-      // Se il numero era nella lista "liberati" rimuovilo, altrimenti incrementa il contatore
-      if(!_db.settings.freedDDT) _db.settings.freedDDT=[];
-      const fIdx=_db.settings.freedDDT.indexOf(num);
-      if(fIdx>=0) _db.settings.freedDDT.splice(fIdx,1);
-      else _db.settings.nextDDT=(_db.settings.nextDDT||1)+1;
+      _db.settings.nextDDT=(_db.settings.nextDDT||1)+1;
     }
     _db.ddt[num]=ddt;
     // Auto-registra le uscite nel registro vendite
@@ -2134,12 +2024,9 @@ const DDT = {
     confirm2(`Eliminare il DDT ${id}? Verranno rimosse anche le uscite auto-registrate in Vendite.`,()=>{
       DDT._removeSalesFromDDT(id);
       delete _db.ddt[id];
-      // Rende il numero DDT di nuovo disponibile
-      if(!_db.settings.freedDDT) _db.settings.freedDDT=[];
-      if(!_db.settings.freedDDT.includes(id)) _db.settings.freedDDT.push(id);
       Store.saveNow();
       DDT.render();
-      toast(`DDT ${id} eliminato — numero ${id} di nuovo disponibile`,'w');
+      toast('DDT eliminato e uscite rimosse','w');
     });
   },
   generatePDF(id){
@@ -3038,264 +2925,6 @@ const Search={
         </div>
       </div>`).join('');
     Search._results=results;openModal('m-search');
-  }
-};
-
-/* ── VENDITA DIRETTA (SCONTRINO) ── */
-const VD={
-  curYear:YEAR,curMonth:new Date().getMonth(),
-  prevMonth(){VD.curMonth--;if(VD.curMonth<0){VD.curMonth=11;VD.curYear--;}VD.renderList()},
-  nextMonth(){VD.curMonth++;if(VD.curMonth>11){VD.curMonth=0;VD.curYear++;}VD.renderList()},
-  render(){
-    document.getElementById('vd-date').value=today();
-    VD.renderList();
-    // Inizializza con una riga vuota se non ce ne sono
-    const rows=document.getElementById('vd-rows');
-    if(!rows.children.length) VD.addRow();
-    VD.recalc();
-  },
-  addRow(data={}){
-    const container=document.getElementById('vd-rows');
-    const idx=container.children.length;
-    const descMap={'Roccaverano DOP fresco':'dop-fresco','Roccaverano DOP affinato':'dop-affinato','Robiola del Merlo Bianco':'nondop'};
-    const selVal=descMap[data.desc]||(data.desc?'custom':'');
-    const div=document.createElement('div');
-    div.className='card';div.style.marginBottom='8px';div.style.padding='10px';
-    div.innerHTML=`
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-weight:600;font-size:.82rem">Riga ${idx+1}</span>
-        <button class="btn btn-d btn-xs" onclick="this.closest('.card').remove();VD.recalc()">🗑</button>
-      </div>
-      <div class="frow">
-        <div class="fg"><label class="fl">Qty *</label><input type="number" class="fc fc-sm" min="1" value="${data.qty||1}" oninput="VD.recalc();VD._updateBolliniSug(this.closest('.card'))"></div>
-        <div class="fg" style="flex:2"><label class="fl">Descrizione *</label>
-          <select class="fc fc-sm" onchange="VD.onDescChange(this)">
-            <option value="">-- Seleziona --</option>
-            <option value="dop-fresco" ${selVal==='dop-fresco'?'selected':''}>Roccaverano DOP fresco</option>
-            <option value="dop-affinato" ${selVal==='dop-affinato'?'selected':''}>Roccaverano DOP affinato</option>
-            <option value="nondop" ${selVal==='nondop'?'selected':''}>Robiola del Merlo Bianco</option>
-            <option value="custom" ${selVal==='custom'?'selected':''}>Altro</option>
-          </select>
-          <input type="text" class="fc fc-sm" style="margin-top:4px" placeholder="Descrizione" value="${data.desc||''}" data-desc-free>
-        </div>
-      </div>
-      <div class="frow">
-        <div class="fg" style="flex:2">
-          <label class="fl">Lotto</label>
-          <select class="fc fc-sm" data-lot-sel onchange="VD.onLotSelect(this)">
-            <option value="">-- Scegli lotto --</option>
-          </select>
-          <input type="text" class="fc fc-sm" style="margin-top:4px;display:none" placeholder="DD/MM/YYYY (manuale)" value="${data.lot||''}" data-lot-input>
-        </div>
-        <div class="fg" id="vd-bollini-wrap-${idx}" style="display:none">
-          <label class="fl">Bollini DOP <span data-bollini-counter class="mini" style="color:var(--warn)"></span></label>
-          <div data-bollini-tags style="min-height:34px;margin-bottom:4px"></div>
-          <div data-bollini-sug class="pill-row" style="margin-bottom:4px"></div>
-          <div class="input-group">
-            <input type="text" class="fc fc-sm" data-bollini-input placeholder="4 cifre" maxlength="4">
-            <button class="btn btn-p btn-sm" onclick="VD.addBollinoToRow(this)">+</button>
-          </div>
-        </div>
-        <div class="fg"><label class="fl">Prezzo (IVA incl.)</label><input type="number" class="fc fc-sm" step="0.01" placeholder="0.00" value="${data.price||''}" oninput="VD.recalc()"></div>
-      </div>
-    `;
-    container.appendChild(div);
-    const descSel=div.querySelector('select');
-    if(data.desc) VD.onDescChange(descSel);
-    else VD._populateLots(div.querySelector('[data-lot-sel]'),'');
-    if(data.lot){const li=div.querySelector('[data-lot-input]');if(li)li.style.display='block';}
-  },
-  _populateLots(sel,type){
-    if(!sel)return;
-    sel.innerHTML='<option value="">-- Scegli lotto --</option>';
-    Object.entries(_db.production).filter(([id])=>Mag.remaining(id)>0).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([id,l])=>{
-      const days=daysSince(id);
-      const isFresco=days>=5&&days<=9;const isAffinato=days>=10;
-      if(type==='fresco'&&!isFresco)return;
-      if(type==='affinato'&&!isAffinato)return;
-      const stato=days<5?'non DOP':isFresco?'fresco':'affinato';
-      const opt=document.createElement('option');
-      opt.value=isoToLot(id);
-      opt.textContent=`${isoToLot(id)}  (${stato}, ${Mag.remaining(id)} disp., g.${days})`;
-      sel.appendChild(opt);
-    });
-    const m=document.createElement('option');m.value='__manual__';m.textContent='✏ Inserisci manualmente';sel.appendChild(m);
-  },
-  onLotSelect(sel){
-    const row=sel.closest('.card');
-    const input=row.querySelector('[data-lot-input]');
-    if(!input)return;
-    if(sel.value==='__manual__'){input.style.display='block';input.value='';input.focus();}
-    else if(sel.value){input.value=sel.value;input.style.display='none';}
-    else{input.value='';input.style.display='none';}
-    VD._updateBolliniSug(row);
-  },
-  onDescChange(sel){
-    const row=sel.closest('.card');
-    const free=row.querySelector('[data-desc-free]');
-    const lotSel=row.querySelector('[data-lot-sel]');
-    const bolWrap=row.querySelector('[id^="vd-bollini-wrap"]')||row.querySelector('.fg:has([data-bollini-tags])');
-    const map={'dop-fresco':'Roccaverano DOP fresco','dop-affinato':'Roccaverano DOP affinato','nondop':'Robiola del Merlo Bianco'};
-    const typeMap={'dop-fresco':'fresco','dop-affinato':'affinato','nondop':'','custom':'','':''};
-    if(sel.value&&sel.value!=='custom'){free.value=map[sel.value]||'';free.readOnly=true;}
-    else{free.readOnly=false;}
-    VD._populateLots(lotSel,typeMap[sel.value]||'');
-    const li=row.querySelector('[data-lot-input]');if(li){li.value='';li.style.display='none';}
-    // Mostra sezione bollini solo per DOP
-    const isDOP=sel.value==='dop-fresco'||sel.value==='dop-affinato';
-    const bw=row.querySelectorAll('.fg');
-    bw.forEach(f=>{if(f.querySelector('[data-bollini-tags]'))f.style.display=isDOP?'block':'none';});
-    if(isDOP)VD._updateBolliniSug(row);
-  },
-  _updateBolliniSug(row){
-    const sug=row.querySelector('[data-bollini-sug]');if(!sug)return;
-    const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
-    const used=Array.from(row.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol);
-    const free=Object.entries(_db.bollini||{}).filter(([id,b])=>!b.used&&!used.includes(id)).sort((a,b)=>a[0].localeCompare(b[0])).slice(0,Math.max(qty,6));
-    sug.innerHTML=free.map(([id])=>`<button class="bollino-sug" onclick="VD.addBollinoById('${id}',this.closest('.card'))">${id}</button>`).join('');
-    // Counter
-    const counter=row.querySelector('[data-bollini-counter]');
-    if(counter){
-      const added=used.length;
-      if(added===qty){counter.textContent='✅ '+added+'/'+qty;counter.style.color='var(--ok)';}
-      else{counter.textContent=added+'/'+qty+' — servono ancora '+(qty-added);counter.style.color='var(--warn)';}
-    }
-  },
-  addBollinoToRow(btn){
-    const row=btn.closest('.card');
-    const inp=row.querySelector('[data-bollini-input]');
-    const val=inp.value.trim();
-    if(val.length!==4||isNaN(val)){toast('Inserisci 4 cifre','w');return;}
-    const matches=Object.keys(_db.bollini||{}).filter(id=>id.startsWith('MB'+val));
-    if(!matches.length){VD.addBollinoById(`MB${val.padStart(4,'0')}/${String(YEAR).slice(-2)}`,row,true);}
-    else if(matches.length===1){VD.addBollinoById(matches[0],row);}
-    else{matches.forEach(m=>{if(confirm(`Usare ${m}?`)){VD.addBollinoById(m,row);return;}});}
-    inp.value='';
-  },
-  addBollinoById(fullId,row,force=false){
-    const b=_db.bollini&&_db.bollini[fullId];
-    if(b&&b.used&&!force){toast(`Bollino ${fullId} già usato`,'e');return;}
-    const tags=row.querySelector('[data-bollini-tags]');
-    if(Array.from(tags.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol).includes(fullId)){toast('Già aggiunto','w');return;}
-    const tag=document.createElement('span');tag.className='tag';tag.dataset.bol=fullId;
-    tag.innerHTML=`${fullId}<button class="tag-x" onclick="this.parentElement.remove();VD._updateBolliniSug(this.closest('.card'))">×</button>`;
-    tags.appendChild(tag);VD._updateBolliniSug(row);
-  },
-  recalc(){
-    let tot=0;
-    document.querySelectorAll('#vd-rows .card').forEach(row=>{
-      const qty=parseFloat(row.querySelector('input[type=number]')?.value)||0;
-      const price=parseFloat(row.querySelectorAll('input[type=number]')[1]?.value)||0;
-      tot+=qty*price;
-    });
-    const el=document.getElementById('vd-totale');if(el)el.textContent=fmtEuro(tot);
-  },
-  save(){
-    const date=document.getElementById('vd-date').value;
-    const ref=document.getElementById('vd-ref').value.trim();
-    if(!date){toast('Inserisci la data','w');return;}
-    const rows=[];
-    let ok=true;
-    document.querySelectorAll('#vd-rows .card').forEach(row=>{
-      const qty=parseInt(row.querySelector('input[type=number]')?.value)||0;
-      const desc=row.querySelector('[data-desc-free]')?.value||'';
-      const lotInput=row.querySelector('[data-lot-input]');
-      const lotSel=row.querySelector('[data-lot-sel]');
-      const lot=(lotInput&&lotInput.style.display!=='none'&&lotInput.value)?lotInput.value:(lotSel&&lotSel.value&&lotSel.value!=='__manual__'?lotSel.value:'');
-      const price=parseFloat(row.querySelectorAll('input[type=number]')[1]?.value)||0;
-      const bollini=Array.from(row.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol);
-      const isDOP=desc.toLowerCase().includes('dop')||desc.toLowerCase().includes('roccaverano');
-      if(!lot){toast('Seleziona un lotto per ogni riga','w');ok=false;return;}
-      if(qty<1){toast('Quantità non valida','w');ok=false;return;}
-      if(isDOP&&bollini.length!==qty){toast(`Riga "${desc}": servono ${qty} bollini (uno per forma)`,'w');ok=false;return;}
-      rows.push({qty,desc,lot,price,bollini,isDOP});
-    });
-    if(!ok||!rows.length)return;
-    // Registra ogni riga come uscita nel registro vendite
-    let allOk=true;
-    rows.forEach(row=>{
-      const parts=row.lot.split('/');
-      if(parts.length!==3){toast(`Lotto ${row.lot} non valido`,'e');allOk=false;return;}
-      const lotId=`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-      if(!_db.production[lotId]){toast(`Lotto ${row.lot} non trovato in produzione`,'e');allOk=false;return;}
-      if(row.qty>Mag.remaining(lotId)){toast(`Lotto ${row.lot}: rimanenza insufficiente (${Mag.remaining(lotId)} disp.)`,'e');allOk=false;return;}
-      // Marca bollini come usati
-      row.bollini.forEach(b=>{
-        if(!_db.bollini[b])_db.bollini[b]={id:b,used:false};
-        _db.bollini[b].used=true;_db.bollini[b].usedDate=date;_db.bollini[b].lotId=lotId;
-      });
-      const sale={
-        id:uuid(),date,
-        type:row.isDOP?'dop':'nondop',
-        qty:row.qty,
-        bollini:row.isDOP?row.bollini:[],
-        method:'scontrino',
-        scontrinoRef:ref||date,
-        price:row.price,
-        note:`Vendita diretta${ref?' scontrino '+ref:''}`,
-        _fromScontrino:uuid()
-      };
-      if(!_db.sales[lotId])_db.sales[lotId]=[];
-      _db.sales[lotId].push(sale);
-    });
-    if(!allOk)return;
-    // Salva anche nello storico vendite dirette
-    const totale=rows.reduce((s,r)=>s+r.qty*r.price,0);
-    if(!_db.venditeDirecte)_db.venditeDirecte={};
-    const vid=uuid();
-    _db.venditeDirecte[vid]={id:vid,date,ref,rows,totale,note:document.getElementById('vd-note').value};
-    Store.saveNow();
-    // Reset form
-    document.getElementById('vd-rows').innerHTML='';
-    document.getElementById('vd-ref').value='';
-    document.getElementById('vd-note').value='';
-    VD.addRow();VD.recalc();
-    VD.renderList();
-    Dash.render();
-    toast(`Vendita registrata — ${rows.length} riga${rows.length>1?'righe':''} in Registro Vendite`,'s');
-  },
-  renderList(){
-    const y=VD.curYear,m=VD.curMonth;
-    document.getElementById('vd-month-label').textContent=`${MONTHS_IT[m]} ${y}`;
-    const items=Object.values(_db.venditeDirecte||{})
-      .filter(v=>{const d=new Date(v.date);return d.getFullYear()===y&&d.getMonth()===m;})
-      .sort((a,b)=>b.date.localeCompare(a.date));
-    const el=document.getElementById('vd-list');
-    if(!items.length){el.innerHTML='<div class="empty"><div class="ei">🧾</div><p>Nessuna vendita diretta in questo mese</p></div>';return;}
-    el.innerHTML=`<div class="tw"><table><thead><tr><th>Data</th><th>Scontrino</th><th>Righe</th><th>Totale</th><th>Note</th><th></th></tr></thead><tbody>
-      ${items.map(v=>`<tr>
-        <td>${fmtDate(v.date)}</td>
-        <td><span class="mini">${v.ref||'—'}</span></td>
-        <td>${(v.rows||[]).map(r=>`<span class="mini">${r.qty}× ${r.desc||'—'} – ${isoToLot?r.lot:r.lot}</span>`).join('<br>')}</td>
-        <td><b>${fmtEuro(v.totale)}</b></td>
-        <td><span class="mini">${v.note||''}</span></td>
-        <td><button class="btn btn-d btn-xs" onclick="VD.delete('${v.id}')">🗑</button></td>
-      </tr>`).join('')}
-    </tbody></table></div>`;
-  },
-  delete(id){
-    confirm2('Eliminare questa vendita diretta? Le uscite associate verranno rimosse dal registro.',()=>{
-      const v=_db.venditeDirecte[id];
-      if(v){
-        // Rimuovi uscite collegate
-        (v.rows||[]).forEach(row=>{
-          const parts=(row.lot||'').split('/');
-          if(parts.length!==3)return;
-          const lotId=`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-          if(_db.sales[lotId]){
-            // Libera bollini
-            _db.sales[lotId].forEach(s=>{
-              if(s.scontrinoRef===v.ref&&s.date===v.date){
-                (s.bollini||[]).forEach(b=>{if(_db.bollini[b]){_db.bollini[b].used=false;_db.bollini[b].usedDate=null;_db.bollini[b].lotId=null;}});
-              }
-            });
-            _db.sales[lotId]=_db.sales[lotId].filter(s=>!(s.scontrinoRef===v.ref&&s.date===v.date&&s.method==='scontrino'));
-          }
-        });
-        delete _db.venditeDirecte[id];
-      }
-      Store.saveNow();VD.renderList();toast('Vendita eliminata','w');
-    });
   }
 };
 
