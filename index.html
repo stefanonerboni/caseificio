@@ -591,6 +591,7 @@ select.fc option{font-family:var(--ff)}
             <option value="nondop">📦 Non DOP</option>
             <option value="autoconsumo">🧑‍🍳 Autoconsumo</option>
             <option value="assaggi">👅 Assaggi</option>
+            <option value="eliminazione">🗑 Eliminazione (non conforme / problemi)</option>
           </select>
         </div>
       </div>
@@ -1424,7 +1425,8 @@ const Sales = {
     const rem=Mag.remaining(id);
     const dopSold=slist.filter(s=>s.type==='dop').reduce((s,x)=>s+Number(x.qty||0),0);
     const ndSold=slist.filter(s=>s.type==='nondop').reduce((s,x)=>s+Number(x.qty||0),0);
-    const autoSold=slist.filter(s=>s.type==='autoconsumo').reduce((s,x)=>s+Number(x.qty||0),0);
+    const autoSold=slist.filter(s=>s.type==='autoconsumo'||s.type==='assaggi').reduce((s,x)=>s+Number(x.qty||0),0);
+    const elimSold=slist.filter(s=>s.type==='eliminazione').reduce((s,x)=>s+Number(x.qty||0),0);
     const pct=forms>0?Math.round(((forms-rem)/forms)*100):0;
     return `<div class="lot-block">
       <div class="lot-block-hd" onclick="Sales.toggleBlock('${id}')">
@@ -1436,6 +1438,7 @@ const Sales = {
           <span class="bdg bdg-dop">DOP: ${dopSold}</span>
           <span class="bdg bdg-nd">Non DOP: ${ndSold}</span>
           <span class="bdg bdg-auto">Auto: ${autoSold}</span>
+          ${elimSold?`<span class="bdg bdg-err">Elim: ${elimSold}</span>`:''}
           <span class="bdg bdg-ok">Rim: ${rem}/${forms}</span>
           <button class="btn btn-a btn-xs" onclick="event.stopPropagation();Sales.openAdd('${id}')">+ Uscita</button>
         </div>
@@ -1451,7 +1454,7 @@ const Sales = {
     </div>`;
   },
   renderSaleRow(lid,s){
-    const typeMap={dop:'<span class="bdg bdg-dop">DOP</span>',nondop:'<span class="bdg bdg-nd">Non DOP</span>',autoconsumo:'<span class="bdg bdg-auto">Auto</span>',assaggi:'<span class="bdg bdg-auto">Assaggi</span>'};
+    const typeMap={dop:'<span class="bdg bdg-dop">DOP</span>',nondop:'<span class="bdg bdg-nd">Non DOP</span>',autoconsumo:'<span class="bdg bdg-auto">Auto</span>',assaggi:'<span class="bdg bdg-auto">Assaggi</span>',eliminazione:'<span class="bdg bdg-err">🗑 Elim.</span>'};
     const bollini=(s.bollini||[]).map(b=>`<span class="bdg bdg-amber">${b}</span>`).join(' ');
     const rif=s.ddtId||s.ndRef||s.scontrinoDate||'—';
     const isFromDDT=!!s._fromDDT;
@@ -1754,9 +1757,12 @@ const DDT = {
     </table>`;
   },
   nextNumber(){
-    const n=_db.settings.nextDDT||1;
     const yr=String(YEAR).slice(-2);
-    return `${pad2(n)}C/${yr}`;
+    if(!_db.settings.freedDDT) _db.settings.freedDDT=[];
+    const freed=(_db.settings.freedDDT||[]).filter(x=>x.endsWith('/'+yr)).sort();
+    if(freed.length) return freed[0];
+    const n=_db.settings.nextDDT||1;
+    return pad2(n)+'C/'+yr;
   },
   openNew(){
     document.getElementById('m-ddt-title').textContent='Nuovo DDT';
@@ -1824,7 +1830,7 @@ const DDT = {
         <button class="btn btn-d btn-xs" onclick="this.closest('.card').remove();DDT.recalc()">🗑</button>
       </div>
       <div class="frow">
-        <div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="${data.qty||1}" placeholder="1" oninput="DDT.recalc()"></div>
+        <div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="${data.qty||1}" placeholder="1" oninput="DDT.recalc();DDT._updateBollinoSug(this.closest('.card'))"></div>
         <div class="fg" style="flex:2"><label class="fl">Descrizione prodotto</label>
           <select class="fc fc-sm" onchange="DDT.onDescChange(this)">
             <option value="">-- Seleziona --</option>
@@ -1844,20 +1850,40 @@ const DDT = {
           </select>
           <input type="text" class="fc fc-sm" style="margin-top:4px;display:none" placeholder="DD/MM/YYYY (manuale)" value="${data.lot||''}" data-lot-input>
         </div>
-        <div class="fg"><label class="fl">N° Bollini</label><input type="text" class="fc fc-sm" placeholder="MB0001/24 MB0002/24" value="${data.bollino||''}"></div>
+        <div class="fg" data-bollini-plain-wrap style="display:${(selVal==='dop-fresco'||selVal==='dop-affinato')?'none':'block'}">
+          <label class="fl">Bollini</label>
+          <input type="text" class="fc fc-sm" placeholder="MB0001/24 MB0002/24" value="${data.bollino||''}" data-bollino-plain>
+        </div>
+        <div class="fg" data-bollini-dop-wrap style="display:${(selVal==='dop-fresco'||selVal==='dop-affinato')?'block':'none'}">
+          <label class="fl">Bollini DOP <span data-bollini-counter class="mini"></span></label>
+          <div data-bollini-tags class="pill-row" style="min-height:28px;margin-bottom:4px;flex-wrap:wrap;gap:3px"></div>
+          <div data-bollini-sug class="pill-row" style="margin-bottom:4px;gap:3px"></div>
+          <div class="input-group">
+            <input type="text" class="fc fc-sm" data-bollini-input placeholder="4 cifre" maxlength="4">
+            <button class="btn btn-p btn-sm" onclick="DDT._addBollinoToRow(this.closest('.card'))">+</button>
+          </div>
+        </div>
         <div class="fg"><label class="fl">Prezzo tot. (IVA incl.)</label><input type="number" class="fc fc-sm" step="0.01" placeholder="0.00" value="${data.unitPrice||''}" oninput="DDT.recalc()"></div>
       </div>
     `;
     container.appendChild(div);
-    // Trigger desc e popola lotti
     const descSel=div.querySelector('select');
     if(data.desc) DDT.onDescChange(descSel);
     else DDT.populateLotSelect(div.querySelector('[data-lot-sel]'),'');
-    // Se c'era già un lotto, mostralo nel campo manuale
     if(data.lot){
       const li=div.querySelector('[data-lot-input]');
-      if(li){ li.style.display='block'; }
+      if(li) li.style.display='block';
     }
+    if(data.bollino&&(selVal==='dop-fresco'||selVal==='dop-affinato')){
+      const tags=div.querySelector('[data-bollini-tags]');
+      if(tags) data.bollino.split(/\s+/).filter(Boolean).forEach(b=>{
+        const tag=document.createElement('span');
+        tag.className='tag';tag.dataset.bol=b;
+        tag.innerHTML=b+'<button class="tag-x" onclick="this.parentElement.remove();DDT._updateBollinoSug(this.closest(\'.card\'))">\u00d7</button>';
+        tags.appendChild(tag);
+      });
+    }
+    DDT._updateBollinoSug(div);
   },
   populateLotSelect(sel, type){
     if(!sel) return;
@@ -1905,13 +1931,64 @@ const DDT = {
     const lotSel=row.querySelector('[data-lot-sel]');
     if(!free) return;
     const map={'dop-fresco':'Roccaverano DOP fresco','dop-affinato':'Roccaverano DOP affinato','nondop':'Robiola del Merlo Bianco'};
-    if(sel.value&&sel.value!=='custom'){ free.value=map[sel.value]||''; free.readOnly=true; }
-    else { free.readOnly=false; }
-    // Filtra i lotti in base al tipo scelto e resetta selezione
     const typeMap={'dop-fresco':'fresco','dop-affinato':'affinato','nondop':'','custom':'','':''};
-    DDT.populateLotSelect(lotSel, typeMap[sel.value]||'');
+    if(sel.value&&sel.value!=='custom'){free.value=map[sel.value]||'';free.readOnly=true;}
+    else{free.readOnly=false;}
+    DDT.populateLotSelect(lotSel,typeMap[sel.value]||'');
     const input=row.querySelector('[data-lot-input]');
-    if(input){ input.value=''; input.style.display='none'; }
+    if(input){input.value='';input.style.display='none';}
+    const isDOP=sel.value==='dop-fresco'||sel.value==='dop-affinato';
+    const wP=row.querySelector('[data-bollini-plain-wrap]');
+    const wD=row.querySelector('[data-bollini-dop-wrap]');
+    if(wP) wP.style.display=isDOP?'none':'block';
+    if(wD) wD.style.display=isDOP?'block':'none';
+    if(isDOP) DDT._updateBollinoSug(row);
+  },
+  _updateBollinoSug(row){
+    const sug=row.querySelector('[data-bollini-sug]');
+    if(!sug) return;
+    const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
+    const used=Array.from(row.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol);
+    const free=Object.entries(_db.bollini||{})
+      .filter(([id,b])=>!b.used&&!used.includes(id))
+      .sort((a,b)=>a[0].localeCompare(b[0]))
+      .slice(0,Math.max(qty,8));
+    sug.innerHTML=free.map(([id])=>
+      '<button class="bollino-sug" onclick="DDT._addBollinoById(\'' + id + '\',this.closest(\'.card\'))">' + id + '</button>'
+    ).join('');
+    DDT._updateCounter(row);
+  },
+  _updateCounter(row){
+    const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
+    const added=row.querySelectorAll('[data-bol]').length;
+    const el=row.querySelector('[data-bollini-counter]');
+    if(!el) return;
+    if(added===qty){el.textContent='\u2705 '+added+'/'+qty;el.style.color='var(--ok)';}
+    else{el.textContent=added+'/'+qty+(added<qty?' \u2014 servono ancora '+(qty-added):'');el.style.color='var(--warn)';}
+  },
+  _addBollinoToRow(row){
+    const inp=row.querySelector('[data-bollini-input]');
+    if(!inp) return;
+    const val=inp.value.trim();
+    if(val.length!==4||isNaN(val)){toast('Inserisci esattamente 4 cifre','w');return;}
+    const matches=Object.keys(_db.bollini||{}).filter(id=>id.startsWith('MB'+val));
+    if(!matches.length){DDT._addBollinoById('MB'+val.padStart(4,'0')+'/'+String(YEAR).slice(-2),row,true);}
+    else if(matches.length===1){DDT._addBollinoById(matches[0],row);}
+    else{for(const m of matches){if(confirm('Usare '+m+'?')){DDT._addBollinoById(m,row);break;}}}
+    inp.value='';
+  },
+  _addBollinoById(fullId,row,force){
+    force=force||false;
+    const b=_db.bollini&&_db.bollini[fullId];
+    if(b&&b.used&&!force){toast('Bollino '+fullId+' già usato','e');return;}
+    const tags=row.querySelector('[data-bollini-tags]');
+    if(!tags) return;
+    if(Array.from(tags.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol).includes(fullId)){toast('Già aggiunto','w');return;}
+    const tag=document.createElement('span');
+    tag.className='tag';tag.dataset.bol=fullId;
+    tag.innerHTML=fullId+'<button class="tag-x" onclick="this.parentElement.remove();DDT._updateBollinoSug(this.closest(\'.card\')); ">\u00d7</button>';
+    tags.appendChild(tag);
+    DDT._updateBollinoSug(row);
   },
   recalc(){
     let impon=0;
@@ -1983,20 +2060,33 @@ const DDT = {
     const clientId=document.getElementById('md-client').value;
     if(!num||!date||!clientId){toast('Compila numero DDT, data e cliente','w');return;}
     const rows=[];
+    let rowErr=false;
     document.querySelectorAll('#md-rows .card').forEach(row=>{
+      if(rowErr) return;
       const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
       const desc=row.querySelector('[data-desc-free]')?.value||'';
-      // Lotto: prendi dal campo manuale se visibile, altrimenti dal select
       const lotInput=row.querySelector('[data-lot-input]');
       const lotSel=row.querySelector('[data-lot-sel]');
       const lot=(lotInput&&lotInput.style.display!=='none'&&lotInput.value)
         ? lotInput.value
         : (lotSel&&lotSel.value&&lotSel.value!=='__manual__'?lotSel.value:'');
-      const textInputs=row.querySelectorAll('input[type=text]');
-      const bollino=textInputs[textInputs.length-1]?.value||'';
+      const isDOP=desc.toLowerCase().includes('dop')||desc.toLowerCase().includes('roccaverano');
+      let bollino='';
+      if(isDOP){
+        const tagEls=row.querySelectorAll('[data-bol]');
+        const bArr=Array.from(tagEls).map(t=>t.dataset.bol);
+        if(bArr.length!==qty){
+          toast('Riga "'+desc+'": '+bArr.length+' bollini per '+qty+' forme — devono coincidere','e');
+          rowErr=true; return;
+        }
+        bollino=bArr.join(' ');
+      } else {
+        bollino=row.querySelector('[data-bollino-plain]')?.value||'';
+      }
       const unitPrice=parseFloat(row.querySelectorAll('input[type=number]')[1]?.value)||0;
       rows.push({qty,desc,lot,bollino,unitPrice,totalPrice:(qty*unitPrice)});
     });
+    if(rowErr) return;
     const totaleDocumento=rows.reduce((s,r)=>s+r.totalPrice,0);
     const ddt={
       id:num,
@@ -2009,8 +2099,11 @@ const DDT = {
       note:document.getElementById('md-note').value
     };
     if(!editId){
-      if(_db.ddt[num]&&!confirm(`DDT ${num} già esistente. Sovrascrivere?`)) return;
-      _db.settings.nextDDT=(_db.settings.nextDDT||1)+1;
+      if(_db.ddt[num]&&!confirm('DDT '+num+' già esistente. Sovrascrivere?')) return;
+      if(!_db.settings.freedDDT) _db.settings.freedDDT=[];
+      const fi=_db.settings.freedDDT.indexOf(num);
+      if(fi>=0) _db.settings.freedDDT.splice(fi,1);
+      else _db.settings.nextDDT=(_db.settings.nextDDT||1)+1;
     }
     _db.ddt[num]=ddt;
     // Auto-registra le uscite nel registro vendite
@@ -2021,12 +2114,14 @@ const DDT = {
     toast(`DDT ${num} salvato — uscite registrate automaticamente in Vendite`,'s');
   },
   deleteDDT(id){
-    confirm2(`Eliminare il DDT ${id}? Verranno rimosse anche le uscite auto-registrate in Vendite.`,()=>{
+    confirm2('Eliminare il DDT '+id+'? Verranno rimosse uscite, bollini e forme associati.',()=>{
       DDT._removeSalesFromDDT(id);
       delete _db.ddt[id];
+      if(!_db.settings.freedDDT) _db.settings.freedDDT=[];
+      if(!_db.settings.freedDDT.includes(id)) _db.settings.freedDDT.push(id);
       Store.saveNow();
       DDT.render();
-      toast('DDT eliminato e uscite rimosse','w');
+      toast('DDT '+id+' eliminato — numero di nuovo disponibile','w');
     });
   },
   generatePDF(id){
@@ -2038,59 +2133,56 @@ const DDT = {
     const doc=new jsPDF({unit:'mm',format:'a4'});
     const pw=doc.internal.pageSize.getWidth();
     // Header
-    doc.setFillColor(45,80,22);
-    doc.rect(0,0,pw,28,'F');
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(16);
-    doc.setFont('helvetica','bold');
-    doc.text('DOCUMENTO DI TRASPORTO',14,12);
-    doc.setFontSize(11);
-    doc.text(`N° ${id}`,14,20);
-    doc.setFontSize(10);
-    doc.text(`Data: ${fmtDate(d.date)}`,pw-14,20,{align:'right'});
+    doc.setDrawColor(45,80,22);doc.setLineWidth(0.8);
+    doc.line(14,13,pw-14,13);
+    doc.setTextColor(45,80,22);
+    doc.setFontSize(14);doc.setFont('helvetica','bold');
+    doc.text('DOCUMENTO DI TRASPORTO  N° '+id,14,9);
+    doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+    doc.text('Data: '+fmtDate(d.date),pw-14,9,{align:'right'});
     doc.setTextColor(0,0,0);
     // Mittente
     doc.setFontSize(9);
     doc.setFont('helvetica','bold');
-    doc.text('MITTENTE',14,36);
+    doc.text('MITTENTE',14,20);
     doc.setFont('helvetica','normal');
-    doc.text(az.nome||'—',14,42);
-    doc.text(az.indirizzo||'—',14,47);
-    doc.text(`P.IVA: ${az.piva||'—'}`,14,52);
-    doc.text(`Tel: ${d.myPhone||az.telefono||'—'}`,14,57);
-    if(az.sdi) doc.text(`Cod.SDI: ${az.sdi}`,14,62);
+    doc.text(az.nome||'—',14,26);
+    doc.text(az.indirizzo||'—',14,31);
+    doc.text('P.IVA: '+(az.piva||'—'),14,36);
+    doc.text('Tel: '+(d.myPhone||az.telefono||'—'),14,41);
+    if(az.sdi) doc.text('Cod.SDI: '+az.sdi,14,46);
     // Destinatario
     doc.setFont('helvetica','bold');
-    doc.text('DESTINATARIO',110,36);
+    doc.text('DESTINATARIO',110,20);
     doc.setFont('helvetica','normal');
-    doc.text(client.nome||'—',110,42);
-    doc.text(client.indirizzo||'—',110,47);
-    doc.text(`P.IVA: ${client.piva||'—'}`,110,52);
-    doc.text(`Tel: ${client.telefono||'—'}`,110,57);
-    if(client.sdi) doc.text(`Cod.Univ: ${client.sdi}`,110,62);
+    doc.text(client.nome||'—',110,26);
+    doc.text(client.indirizzo||'—',110,31);
+    doc.text('P.IVA: '+(client.piva||'—'),110,36);
+    doc.text('Tel: '+(client.telefono||'—'),110,41);
+    if(client.sdi) doc.text('Cod.Univ: '+client.sdi,110,46);
     // Causale
     doc.setFontSize(9);
     doc.setFont('helvetica','bold');
-    doc.text('Causale:',14,72);
+    doc.text('Causale:',14,54);
     doc.setFont('helvetica','normal');
-    doc.text(d.causale||'—',40,72);
+    doc.text(d.causale||'—',40,54);
     // Table
     const tableData=(d.rows||[]).map((r,i)=>[
       i+1, r.qty, r.desc||'—', r.lot||'—', r.bollino||'—',
       fmtEuro(r.unitPrice), fmtEuro(r.totalPrice)
     ]);
     doc.autoTable({
-      startY:78,
+      startY:62,
       head:[['#','Qty','Descrizione','Lotto','Bollino','Prezzo un.','Totale']],
       body:tableData,
       styles:{fontSize:8,cellPadding:2},
-      headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'},
+      headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'},
       columnStyles:{0:{cellWidth:8},1:{cellWidth:10},2:{cellWidth:60},3:{cellWidth:25},4:{cellWidth:25},5:{cellWidth:18},6:{cellWidth:18}},
       margin:{left:14,right:14}
     });
     const finalY=doc.lastAutoTable.finalY+8;
     // Totale box
-    doc.setFillColor(232,240,224);doc.rect(pw-78,finalY,64,14,'F');
+    doc.setDrawColor(100,100,100);doc.setLineWidth(0.3);doc.rect(pw-78,finalY,64,12);
     doc.setFont('helvetica','bold');doc.setFontSize(10);
     doc.text(`TOTALE (IVA incl.): ${fmtEuro(d.totaleDocumento||d.totalAmount||0)}`,pw-75,finalY+9);
     if(d.note){
@@ -2225,7 +2317,7 @@ const Report = {
       head:[['Lotto','Litri','Forme','Siero','Caglio','Coag.','Stampi','Conf.Fis','Conf.Org','Conf.Chim','Kg']],
       body:rows,
       styles:{fontSize:7,cellPadding:1.5},
-      headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'},
+      headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'},
       didParseCell(d){ if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,210,190];} }
     });
     doc.save(`produzione-${r.from}-${r.to}.pdf`);
@@ -2265,7 +2357,7 @@ const Report = {
       head:[['Lotto','Data','Tipo','Qty','Bollini','Metodo','Riferimento','Note']],
       body:rows,
       styles:{fontSize:7,cellPadding:1.5},
-      headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'},
+      headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'},
       didParseCell(d){ if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,210,190];} }
     });
     doc.save(`vendite-${r.from}-${r.to}.pdf`);
@@ -2276,11 +2368,11 @@ const Report = {
     const lots=Report.getLots(r.from,r.to);if(!lots.length){toast('Nessun lotto nel periodo','w');return;}
     const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
     const az=_db.settings.azienda||{};const pw=doc.internal.pageSize.getWidth();
-    doc.setFillColor(45,80,22);doc.rect(0,0,pw,32,'F');
-    doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont('helvetica','bold');
-    doc.text('REPORT DISCIPLINARE DOP – Robiola di Roccaverano DOP',14,12);
-    doc.setFontSize(9);doc.text(`${az.nome||'Azienda Agricola Merlo Bianco'} – P.IVA: ${az.piva||'—'}`,14,21);
-    doc.text(`${az.indirizzo||''}`,14,27);doc.text(`Periodo: ${fmtDate(r.from)} – ${fmtDate(r.to)}`,pw-14,27,{align:'right'});
+    doc.setDrawColor(45,80,22);doc.setLineWidth(0.8);doc.line(14,13,pw-14,13);
+    doc.setTextColor(45,80,22);doc.setFontSize(11);doc.setFont('helvetica','bold');
+    doc.text('REPORT DISCIPLINARE DOP – Robiola di Roccaverano DOP',14,9);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+    doc.text((az.nome||'Merlo Bianco')+' – P.IVA: '+(az.piva||'—')+'   Periodo: '+fmtDate(r.from)+' - '+fmtDate(r.to),14,18);
     doc.setTextColor(0,0,0);
     const rows=[];
     lots.forEach(([id,l])=>{
@@ -2294,7 +2386,7 @@ const Report = {
     const tF=lots.reduce((s,[,l])=>s+Number(l.forms||0),0);
     const tDOP=lots.reduce((s,[id])=>s+(_db.sales[id]||[]).filter(x=>x.type==='dop').reduce((ss,x)=>ss+Number(x.qty||0),0),0);
     rows.push(['TOTALE','',tF,'','',tDOP,(tDOP*0.28).toFixed(2),'','','']);
-    doc.autoTable({startY:36,head:[['Lotto','Litri','Forme','C.Fis','C.Chi','Forme DOP','Kg DOP','Bollini','DDT','Clienti']],body:rows,styles:{fontSize:6.5,cellPadding:1.5},headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'},columnStyles:{7:{cellWidth:50},8:{cellWidth:25},9:{cellWidth:35}},didParseCell(d){if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,215,185];}}});
+    doc.autoTable({startY:24,head:[['Lotto','Litri','Forme','C.Fis','C.Chi','Forme DOP','Kg DOP','Bollini','DDT','Clienti']],body:rows,styles:{fontSize:6.5,cellPadding:1.5},headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'},columnStyles:{7:{cellWidth:50},8:{cellWidth:25},9:{cellWidth:35}},didParseCell(d){if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,215,185];}}});
     const pgH=doc.internal.pageSize.getHeight();
     doc.setFontSize(7);doc.setTextColor(150,150,150);
     doc.text(`Generato il ${fmtDate(today())} – Documento per uso certificazione DOP`,14,pgH-8);
@@ -2307,7 +2399,7 @@ const Report = {
     const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
     Report.pdfHeader(doc,'REPORT BOLLINI DOP',r.from,r.to);
     const rows=used.map(([id,b])=>[id,'Usato',b.lotId?isoToLot(b.lotId):'—',fmtDate(b.usedDate)]);
-    doc.autoTable({startY:38,head:[['Bollino','Stato','Lotto','Data uso']],body:rows,styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'}});
+    doc.autoTable({startY:38,head:[['Bollino','Stato','Lotto','Data uso']],body:rows,styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'}});
     const free=Object.values(_db.bollini||{}).filter(b=>!b.used).length;
     const fy=doc.lastAutoTable.finalY+8;
     doc.setFontSize(9);doc.setFont('helvetica','bold');
@@ -2321,7 +2413,7 @@ const Report = {
     const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
     Report.pdfHeader(doc,'REPORT ANALISI LATTE',r.from,r.to);
     const rows=items.map(a=>[fmtDate(a.date),a.type==='lab'?'Laboratorio':'Giornaliero',a.liters||'—',a.fat||'—',a.proteins||'—',a.lactose||'—',a.caseins||'—',a.caseinIndex||'—',a.somaticCells||'—',a.bacterialLoad||'—',a.note||'']);
-    doc.autoTable({startY:38,head:[['Data','Tipo','Litri','Grasso%','Prot.%','Latt.%','Cas.%','Ind.Cas.','CS×1000','CB UFC','Note']],body:rows,styles:{fontSize:7.5,cellPadding:1.5},headStyles:{fillColor:[45,80,22],textColor:255,fontStyle:'bold'}});
+    doc.autoTable({startY:38,head:[['Data','Tipo','Litri','Grasso%','Prot.%','Latt.%','Cas.%','Ind.Cas.','CS×1000','CB UFC','Note']],body:rows,styles:{fontSize:7.5,cellPadding:1.5},headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'}});
     doc.save(`analisi-latte-${r.from}-${r.to}.pdf`);toast('PDF Analisi Latte generato','s');
   },
   pdfFull(){
@@ -2330,19 +2422,16 @@ const Report = {
   },
   pdfHeader(doc,title,from,to){
     const pw=doc.internal.pageSize.getWidth();
-    doc.setFillColor(45,80,22);
-    doc.rect(0,0,pw,28,'F');
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(14);
-    doc.setFont('helvetica','bold');
-    doc.text('🧀 Merlo Bianco – Gestionale Caseificio',14,11);
-    doc.setFontSize(11);
-    doc.text(title,14,20);
-    doc.setFontSize(9);
-    doc.text(`Periodo: ${fmtDate(from)} – ${fmtDate(to)}`,pw-14,20,{align:'right'});
+    doc.setDrawColor(45,80,22);doc.setLineWidth(0.8);
+    doc.line(14,14,pw-14,14);
+    doc.setTextColor(45,80,22);
+    doc.setFontSize(11);doc.setFont('helvetica','bold');
+    doc.text('Registro Caseificio – Merlo Bianco',14,10);
+    doc.setFontSize(10);doc.text(title,14,19);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+    doc.text('Periodo: '+fmtDate(from)+' - '+fmtDate(to),pw-14,10,{align:'right'});
+    doc.text('Generato il '+fmtDate(today()),pw-14,19,{align:'right'});
     doc.setTextColor(0,0,0);
-    doc.setFontSize(8);
-    doc.text(`Generato il ${fmtDate(today())}`,14,32);
   },
   trace(){
     const q=document.getElementById('trace-q').value.trim();
@@ -2441,12 +2530,54 @@ const Drive = {
     if(_db.settings.gdrive&&_db.settings.gdrive.token){
       Drive._token=_db.settings.gdrive.token;
       Drive._fileId=_db.settings.gdrive.fileId;
-      Drive.updateUI('Connesso (token salvato). Sync al prossimo salvataggio.');
+      Drive.updateUI('Connesso. Sync automatico attivo.');
     } else {
       Drive.updateUI('Non connesso');
     }
-    // Load GIS if clientId present
     if(_db.settings.googleClientId) Drive.loadGIS();
+    // Rinnovo silenzioso token ogni 50 minuti
+    Drive._renewInterval=setInterval(()=>{
+      if(_db.settings.googleClientId&&window.google&&window.google.accounts){
+        Drive._gisClient=google.accounts.oauth2.initTokenClient({
+          client_id:_db.settings.googleClientId,
+          scope:'https://www.googleapis.com/auth/drive.file',
+          prompt:'',
+          callback:(resp)=>{
+            if(!resp.error){
+              Drive._token=resp.access_token;
+              _db.settings.gdrive.token=resp.access_token;
+              Store.save(_mode,_db);
+              Drive.updateUI('\u2705 Token rinnovato '+new Date().toLocaleTimeString('it-IT'));
+            }
+          }
+        });
+        Drive._gisClient.requestAccessToken({prompt:''});
+      }
+    },50*60*1000);
+    // Salva su Drive alla chiusura della pagina
+    window.addEventListener('beforeunload',()=>{ if(Drive._token) Drive.saveToCloud(); });
+    // Carica da Drive all'apertura se token disponibile
+    if(_db.settings.gdrive&&_db.settings.gdrive.token){
+      setTimeout(()=>Drive._loadOnStartup(),2000);
+    }
+  },
+  async _loadOnStartup(){
+    if(!Drive._token) return;
+    const fileName='merlo-bianco-'+_mode+'.json';
+    try{
+      const s=await fetch('https://www.googleapis.com/drive/v3/files?q=name=\''+fileName+'\'&fields=files(id,modifiedTime)',{headers:{Authorization:'Bearer '+Drive._token}});
+      const sd=await s.json();
+      if(!sd.files||!sd.files.length) return;
+      const fid=sd.files[0].id;
+      const r=await fetch('https://www.googleapis.com/drive/v3/files/'+fid+'?alt=media',{headers:{Authorization:'Bearer '+Drive._token}});
+      const d=await r.json();
+      if(d&&d.production){
+        _db=Object.assign(emptyDB(),d);
+        Store.save(_mode,_db);
+        Router.render(Router.current);
+        Drive.updateUI('\u2705 Dati aggiornati da Drive all\'apertura');
+      }
+    }catch(e){ Drive.updateUI('\u26a0 Caricamento da Drive fallito: '+e.message); }
   },
   loadGIS(){
     if(window.google&&window.google.accounts) return;
@@ -2497,10 +2628,30 @@ const Drive = {
     if(Drive._timer) clearTimeout(Drive._timer);
     Drive._timer=setTimeout(Drive.saveToCloud,3000);
   },
+  async _dailyBackup(){
+    if(!Drive._token) return;
+    const key='mb-last-backup-'+_mode;
+    const lastBackup=localStorage.getItem(key)||'';
+    const todayStr=today();
+    if(lastBackup===todayStr) return;
+    const backupName='merlo-bianco-backup-'+_mode+'-'+todayStr+'.json';
+    const data=JSON.stringify(_db);
+    try{
+      const form=new FormData();
+      form.append('metadata',new Blob([JSON.stringify({name:backupName,mimeType:'application/json'})],{type:'application/json'}));
+      form.append('file',new Blob([data],{type:'application/json'}));
+      const resp=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+Drive._token},body:form});
+      const result=await resp.json();
+      if(result.id){
+        localStorage.setItem(key,todayStr);
+        toast('\u2705 Backup giornaliero salvato su Drive','s');
+      }
+    }catch(e){ console.warn('Backup giornaliero fallito:',e.message); }
+  },
   async saveToCloud(){
     if(!Drive._token) return;
     const data=JSON.stringify(_db);
-    const fileName=`merlo-bianco-${_mode}.json`;
+    const fileName='merlo-bianco-'+_mode+'.json';
     try{
       let fileId=Drive._fileId||_db.settings.gdrive.fileId;
       if(!fileId){
@@ -2526,7 +2677,8 @@ const Drive = {
         _db.settings.gdrive.fileId=result.id;
         localStorage.setItem(Store.key(_mode),JSON.stringify(_db));
         const t=new Date().toLocaleTimeString('it-IT');
-        Drive.updateUI(`✅ Sincronizzato alle ${t}`);
+        Drive.updateUI('\u2705 Sincronizzato alle '+t);
+        Drive._dailyBackup();
       } else {
         Drive.updateUI('⚠ Errore sync: '+JSON.stringify(result.error||result));
       }
@@ -2536,7 +2688,7 @@ const Drive = {
   },
   async loadFromCloud(){
     if(!Drive._token){toast('Non connesso a Drive','w');return;}
-    const fileName=`merlo-bianco-${_mode}.json`;
+    const fileName='merlo-bianco-'+_mode+'.json';
     try{
       const s=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}'&fields=files(id)`,{
         headers:{Authorization:`Bearer ${Drive._token}`}
