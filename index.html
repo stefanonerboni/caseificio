@@ -47,6 +47,13 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);font-size:15px;
 .badge-mode.test{background:var(--orange)}
 .sync-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:.75rem;font-family:var(--ff);font-weight:600;display:flex;align-items:center;gap:4px;transition:.2s}
 .sync-pill:hover{background:rgba(255,255,255,.25)}
+.sync-pill.syncing{background:rgba(255,255,255,.2);animation:syncPulse 1s ease-in-out infinite;}
+@keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.5}}
+#sync-dot{width:7px;height:7px;border-radius:50%;background:#fff;opacity:0;transition:opacity .3s,background .3s;flex-shrink:0}
+#sync-dot.active{opacity:1;background:#FCD34D;animation:dotPulse .8s ease-in-out infinite;}
+#sync-dot.ok{opacity:1;background:#86EFAC;animation:none;}
+#sync-dot.err{opacity:1;background:#FCA5A5;animation:none;}
+@keyframes dotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
 
 /* ── LAYOUT ──────────────────────────────────────── */
 #app-layout{display:flex;min-height:calc(100vh - 48px)}
@@ -257,6 +264,7 @@ select.fc option{font-family:var(--ff)}
   <div class="hdr-right">
     <span id="mode-badge" class="badge-mode">PROD</span>
     <button class="sync-pill" onclick="App.toggleMode()">⚙ Modalità</button>
+    <span id="sync-dot" title=""></span>
     <button class="sync-pill" id="btn-drive" onclick="Drive.connect()">☁ Drive</button>
   </div>
 </header>
@@ -865,7 +873,11 @@ const Store = {
       localStorage.setItem(Store.key(mode), JSON.stringify(db));
     }catch(e){ toast('Errore salvataggio locale','e'); }
   },
-  saveNow(){ Store.save(_mode, _db); Drive.scheduleSave(); }
+  saveNow(){
+    _db._localSavedAt=Date.now();
+    Store.save(_mode, _db);
+    Drive.scheduleSave();
+  }
 };
 
 /* ── UTILS ── */
@@ -2433,9 +2445,9 @@ const Drive = {
     if(_db.settings.gdrive&&_db.settings.gdrive.token){
       Drive._token=_db.settings.gdrive.token;
       Drive._fileId=_db.settings.gdrive.fileId;
-      Drive.updateUI('Connesso. Sync automatico attivo.');
+      Drive.updateUI('Connesso. Sync automatico attivo.','ok');
     } else {
-      Drive.updateUI('Non connesso');
+      Drive.updateUI('Non connesso','');
     }
     if(_db.settings.googleClientId) Drive.loadGIS();
     // Rinnovo silenzioso token ogni 50 minuti
@@ -2450,7 +2462,7 @@ const Drive = {
               Drive._token=resp.access_token;
               _db.settings.gdrive.token=resp.access_token;
               Store.save(_mode,_db);
-              Drive.updateUI('\u2705 Token rinnovato '+new Date().toLocaleTimeString('it-IT'));
+              Drive.updateUI('\u2705 Token rinnovato '+new Date().toLocaleTimeString('it-IT'),'ok');
             }
           }
         });
@@ -2458,29 +2470,51 @@ const Drive = {
       }
     },50*60*1000);
     // Salva su Drive alla chiusura della pagina
-    window.addEventListener('beforeunload',()=>{ if(Drive._token) Drive.saveToCloud(); });
+    window.addEventListener('beforeunload',()=>{
+      if(Drive._token && Object.keys(_db.production||{}).length>0) Drive.saveToCloud();
+    });
     // Carica da Drive all'apertura se token disponibile
     if(_db.settings.gdrive&&_db.settings.gdrive.token){
-      setTimeout(()=>Drive._loadOnStartup(),2000);
+      setTimeout(()=>Drive._loadOnStartup(),1000);
     }
   },
   async _loadOnStartup(){
     if(!Drive._token) return;
+    Drive.updateUI('\u2601 Verifica Drive...','syncing');
     const fileName='merlo-bianco-'+_mode+'.json';
     try{
+      // Recupera metadati Drive (modifiedTime)
       const s=await fetch('https://www.googleapis.com/drive/v3/files?q=name=\''+fileName+'\'&fields=files(id,modifiedTime)',{headers:{Authorization:'Bearer '+Drive._token}});
       const sd=await s.json();
-      if(!sd.files||!sd.files.length) return;
+      if(!sd.files||!sd.files.length){ Drive.updateUI('\u2139 Nessun file su Drive',''); return; }
       const fid=sd.files[0].id;
+      const driveTime=new Date(sd.files[0].modifiedTime).getTime();
+      // Confronta con timestamp locale
+      const localTime=_db._localSavedAt||0;
+      const localLots=Object.keys(_db.production||{}).length;
+      if(localTime>0 && localLots>0 && localTime>driveTime-30000){
+        // Dati locali sono recenti quanto o più recenti di Drive: non sovrascrivere
+        Drive.updateUI('\u2705 Dati locali aggiornati (Drive non applicato)','ok');
+        // Sincronizza i locali su Drive silenziosamente
+        setTimeout(()=>Drive.saveToCloud(),3000);
+        return;
+      }
+      // Drive è più recente: scarica
       const r=await fetch('https://www.googleapis.com/drive/v3/files/'+fid+'?alt=media',{headers:{Authorization:'Bearer '+Drive._token}});
       const d=await r.json();
       if(d&&d.production){
+        const driveLots=Object.keys(d.production||{}).length;
+        // Sicurezza extra: se Drive ha MENO dati dei locali, chiedi conferma
+        if(localLots>0 && driveLots<localLots){
+          const msg='Drive ha '+driveLots+' lotti, questo dispositivo ne ha '+localLots+'. Caricare da Drive (i dati locali verranno sovrascritti)?';
+          if(!confirm(msg)) return;
+        }
         _db=Object.assign(emptyDB(),d);
         Store.save(_mode,_db);
         Router.render(Router.current);
-        Drive.updateUI('\u2705 Dati aggiornati da Drive all\'apertura');
+        Drive.updateUI('\u2705 Dati aggiornati da Drive ('+new Date(driveTime).toLocaleTimeString('it-IT')+')','ok');
       }
-    }catch(e){ Drive.updateUI('\u26a0 Caricamento da Drive fallito: '+e.message); }
+    }catch(e){ Drive.updateUI('\u26a0 Caricamento da Drive fallito: '+e.message,'err'); }
   },
   loadGIS(){
     if(window.google&&window.google.accounts) return;
@@ -2507,10 +2541,17 @@ const Drive = {
         Drive._token=resp.access_token;
         _db.settings.gdrive.token=resp.access_token;
         Store.save(_mode,_db);
-        Drive.updateUI('✅ Connesso a Google Drive');
-        document.getElementById('btn-drive').textContent='☁ Sync ora';
+        Drive.updateUI('\u2705 Connesso a Google Drive','ok');
+        document.getElementById('btn-drive').textContent='\u2601 Sync ora';
         toast('Connesso a Google Drive','s');
-        Drive.saveToCloud();
+        // Se ci sono dati locali, caricali su Drive (non sovrascrivere con Drive)
+        if(Object.keys(_db.production||{}).length>0){
+          Drive.saveToCloud();
+          toast('Dati locali caricati su Drive','s');
+        } else {
+          // Nessun dato locale: scarica da Drive
+          Drive._loadOnStartup();
+        }
       }
     });
     Drive._gisClient.requestAccessToken();
@@ -2553,6 +2594,7 @@ const Drive = {
   },
   async saveToCloud(){
     if(!Drive._token) return;
+    Drive.updateUI('\u2601 Salvataggio...','syncing');
     const data=JSON.stringify(_db);
     const fileName='merlo-bianco-'+_mode+'.json';
     try{
@@ -2580,13 +2622,13 @@ const Drive = {
         _db.settings.gdrive.fileId=result.id;
         localStorage.setItem(Store.key(_mode),JSON.stringify(_db));
         const t=new Date().toLocaleTimeString('it-IT');
-        Drive.updateUI('\u2705 Sincronizzato alle '+t);
+        Drive.updateUI('\u2705 Sincronizzato alle '+t,'ok');
         Drive._dailyBackup();
       } else {
-        Drive.updateUI('⚠ Errore sync: '+JSON.stringify(result.error||result));
+        Drive.updateUI('⚠ Errore sync: '+JSON.stringify(result.error||result),'err');
       }
     }catch(e){
-      Drive.updateUI('⚠ Errore rete: '+e.message);
+      Drive.updateUI('⚠ Errore rete: '+e.message,'err');
     }
   },
   async loadFromCloud(){
@@ -2611,11 +2653,18 @@ const Drive = {
       });
     }catch(e){toast('Errore caricamento da Drive: '+e.message,'e');}
   },
-  updateUI(msg){
+  updateUI(msg,state){
     const el=document.getElementById('drive-status');
     if(el) el.textContent=msg;
     const btn=document.getElementById('btn-drive');
-    if(btn) btn.textContent=Drive._token?'☁ Sync':'☁ Drive';
+    if(btn) btn.textContent=Drive._token?'\u2601 Sync':'\u2601 Drive';
+    const dot=document.getElementById('sync-dot');
+    if(!dot) return;
+    dot.title=msg;
+    dot.className='';
+    if(state==='syncing'){dot.className='active';}
+    else if(state==='ok'){dot.className='ok';setTimeout(()=>{if(dot.className==='ok')dot.className='';},4000);}
+    else if(state==='err'){dot.className='err';}
   }
 };
 
