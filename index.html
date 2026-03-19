@@ -1466,75 +1466,28 @@ const Sales = {
     const lot=_db.production[lotId];
     if(!lot){toast('Lotto non trovato','e');return;}
     const days=daysSince(lotId);
-    document.getElementById('m-sale-title').textContent=`Uscita – Lotto ${isoToLot(lotId)}`;
+    const rem=Mag.remaining(lotId);
+    document.getElementById('m-sale-title').textContent='Uscita – Lotto '+isoToLot(lotId);
     document.getElementById('ms-lot-id').value=lotId;
     document.getElementById('ms-edit-id').value='';
     document.getElementById('ms-date').value=today();
     document.getElementById('ms-type').value='';
     document.getElementById('ms-qty').value='1';
     document.getElementById('ms-note').value='';
-
-    // Lot info
-    const rem=Mag.remaining(lotId);
-    document.getElementById('ms-lot-info').textContent=`Lotto ${isoToLot(lotId)} – Giorno ${days} – ${Mag.dicitura(days)} – Rimanenza: ${rem} forme`;
-    // Populate DDT select
-    const ddtSel=document.getElementById('ms-ddt-id');
-    ddtSel.innerHTML='<option value="">-- Seleziona DDT --</option>';
-    Object.entries(_db.ddt||{}).forEach(([k,d])=>{
-      ddtSel.innerHTML+=`<option value="${k}">${k} – ${fmtDate(d.date)} – ${Clients.getName(d.clientId)}</option>`;
-    });
+    document.getElementById('ms-lot-info').textContent='Lotto '+isoToLot(lotId)+' – Giorno '+days+' – '+Mag.dicitura(days)+' – Rimanenza: '+rem+' forme';
     openModal('m-sale');
-    Sales.updateBollinoSuggestions();
   },
   onTypeChange(){
     // Solo autoconsumo/assaggi/eliminazione — nessun campo extra
   },
   onMethodChange(){
-    const m=document.getElementById('ms-method').value;
-    document.getElementById('ms-ddt-fields').style.display=m==='ddt'?'block':'none';
-    document.getElementById('ms-scontrino-fields').style.display=m==='scontrino'?'block':'none';
+    // Non più usato (DOP/nonDOP spostati in DDT e Vendita Diretta)
   },
   updateBollinoSuggestions(){
-    const free=Object.entries(_db.bollini||{}).filter(([,b])=>!b.used).sort((a,b)=>a[0].localeCompare(b[0])).slice(0,10);
-    const sug=document.getElementById('ms-bollini-sug');
-    if(!sug) return;
-    if(!free.length){ sug.innerHTML='<span class="mini">Nessun bollino disponibile</span>'; return; }
-    sug.innerHTML=free.map(([id])=>`<button class="bollino-sug" onclick="Sales.addBollino('${id}')">${id}</button>`).join('');
+    // Non più usato
   },
   addBollinoManual(){
-    const inp=document.getElementById('ms-bol-input');
-    const val=inp.value.trim();
-    if(val.length!==4||isNaN(val)){toast('Inserisci esattamente 4 cifre','w');return;}
-    // Find bollino with this number
-    const matches=Object.keys(_db.bollini||{}).filter(id=>id.startsWith('MB'+val));
-    if(!matches.length){
-      // Check if it might be valid – add with current year
-      const fullId=fmtBollino(parseInt(val),String(YEAR).slice(-2));
-      Sales.addBollino(fullId,true);
-    } else if(matches.length===1){
-      Sales.addBollino(matches[0]);
-    } else {
-      // Multiple matches, ask user
-      const msg=`Trovati più bollini con numero ${val}: ${matches.join(', ')}. Quale vuoi usare?`;
-      // Simple select
-      const choice=matches.find(m=>confirm(`Usare ${m}?`));
-      if(choice) Sales.addBollino(choice);
-    }
-    inp.value='';
-  },
-  addBollino(fullId, force=false){
-    const existing=_db.bollini&&_db.bollini[fullId];
-    if(existing&&existing.used&&!force){toast(`Bollino ${fullId} già utilizzato!`,'e');return;}
-    // Check not already added in this sale
-    const tags=document.getElementById('ms-bollini-tags');
-    const current=Array.from(tags.querySelectorAll('[data-bol]')).map(el=>el.dataset.bol);
-    if(current.includes(fullId)){toast('Bollino già aggiunto','w');return;}
-    const tag=document.createElement('span');
-    tag.className='tag';
-    tag.dataset.bol=fullId;
-    tag.innerHTML=`${fullId}<button class="tag-x" onclick="this.parentElement.remove()">×</button>`;
-    tags.appendChild(tag);
-    Sales.updateBollinoSuggestions();
+    // Non più usato
   },
   saveSale(){
     const lotId=document.getElementById('ms-lot-id').value;
@@ -1882,13 +1835,25 @@ const DDT = {
     if(wD) wD.style.display=isDOP?'block':'none';
     if(isDOP) DDT._updateBollinoSug(row);
   },
+  _getAllUsedBollini(){
+    // Raccoglie tutti i bollini già assegnati in qualsiasi riga del form corrente
+    const used=new Set();
+    document.querySelectorAll('#md-rows [data-bol]').forEach(t=>used.add(t.dataset.bol));
+    return used;
+  },
+  _updateAllBollinoSugs(){
+    // Aggiorna i suggerimenti di TUTTE le righe dopo ogni modifica
+    document.querySelectorAll('#md-rows .card').forEach(row=>DDT._updateBollinoSug(row));
+  },
   _updateBollinoSug(row){
     const sug=row.querySelector('[data-bollini-sug]');
     if(!sug) return;
     const qty=parseInt(row.querySelector('input[type=number]')?.value)||1;
-    const used=Array.from(row.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol);
+    // Escludi bollini usati nel DB + bollini già assegnati in QUALSIASI riga del form
+    const usedInForm=DDT._getAllUsedBollini();
+    const usedInRow=Array.from(row.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol);
     const free=Object.entries(_db.bollini||{})
-      .filter(([id,b])=>!b.used&&!used.includes(id))
+      .filter(([id,b])=>!b.used&&(!usedInForm.has(id)||usedInRow.includes(id)))
       .sort((a,b)=>a[0].localeCompare(b[0]))
       .slice(0,Math.max(qty,8));
     sug.innerHTML=free.map(([id])=>
@@ -1924,9 +1889,9 @@ const DDT = {
     if(Array.from(tags.querySelectorAll('[data-bol]')).map(t=>t.dataset.bol).includes(fullId)){toast('Già aggiunto','w');return;}
     const tag=document.createElement('span');
     tag.className='tag';tag.dataset.bol=fullId;
-    tag.innerHTML=fullId+'<button class="tag-x" onclick="this.parentElement.remove();DDT._updateBollinoSug(this.closest(\'.card\')); ">\u00d7</button>';
+    tag.innerHTML=fullId+'<button class="tag-x" onclick="this.parentElement.remove();DDT._updateAllBollinoSugs(); ">\u00d7</button>';
     tags.appendChild(tag);
-    DDT._updateBollinoSug(row);
+    DDT._updateAllBollinoSugs();
   },
   recalc(){
     let impon=0;
@@ -3045,7 +3010,7 @@ const VD={
       '<span style="font-weight:600;font-size:.82rem">Riga '+(idx+1)+'</span>'+
       '<button class="btn btn-d btn-xs" onclick="this.closest(\'.card\').remove();VD.recalc()">🗑</button></div>'+
       '<div class="frow">'+
-      '<div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="'+(data.qty||1)+'" oninput="VD.recalc();VD._updateSug(this.closest(\'.card\')); "></div>'+
+      '<div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="'+(data.qty||1)+'" oninput="VD.recalc();VD._updateAllSugs(); "></div>'+
       '<div class="fg" style="flex:2"><label class="fl">Descrizione</label>'+
       '<select class="fc fc-sm" onchange="VD.onDesc(this)">'+
       '<option value="">-- Seleziona --</option>'+
@@ -3077,11 +3042,11 @@ const VD={
       if(tags) data.bollini.forEach(function(b){
         const tag=document.createElement('span');
         tag.className='tag';tag.dataset.bol=b;
-        tag.innerHTML=b+'<button class="tag-x" onclick="this.parentElement.remove();VD._updateSug(this.closest(\'.card\')); ">×</button>';
+        tag.innerHTML=b+'<button class="tag-x" onclick="this.parentElement.remove();VD._updateAllSugs(); ">×</button>';
         tags.appendChild(tag);
       });
     }
-    VD._updateSug(div);
+    VD._updateAllSugs();
   },
   onDesc(sel){
     const row=sel.closest('.card');
@@ -3095,7 +3060,7 @@ const VD={
     const li=row.querySelector('[data-lot-input]');if(li){li.value='';li.style.display='none';}
     const isDOP=sel.value==='dop-fresco'||sel.value==='dop-affinato';
     const bw=row.querySelector('[data-bol-wrap]');if(bw) bw.style.display=isDOP?'block':'none';
-    if(isDOP) VD._updateSug(row);
+    if(isDOP) VD._updateAllSugs();
   },
   onLot(sel){
     const row=sel.closest('.card');
@@ -3122,17 +3087,28 @@ const VD={
     });
     var m=document.createElement('option');m.value='__manual__';m.textContent='✏ Inserisci manualmente';sel.appendChild(m);
   },
+  _getAllUsed(){
+    var s=new Set();
+    document.querySelectorAll('#vd-rows [data-bol]').forEach(function(t){s.add(t.dataset.bol);});
+    return s;
+  },
+  _updateAllSugs(){
+    document.querySelectorAll('#vd-rows .card').forEach(function(row){VD._updateSug(row);});
+  },
   _updateSug(row){
     var sug=row.querySelector('[data-bol-sug]');if(!sug) return;
     var qty=parseInt(row.querySelector('input[type=number]')&&row.querySelector('input[type=number]').value)||1;
-    var used=Array.from(row.querySelectorAll('[data-bol]')).map(function(t){return t.dataset.bol;});
-    var free=Object.entries(_db.bollini||{}).filter(function(e){return !e[1].used&&!used.includes(e[0]);}).sort(function(a,b){return a[0].localeCompare(b[0]);}).slice(0,Math.max(qty,8));
+    var usedInForm=VD._getAllUsed();
+    var usedInRow=Array.from(row.querySelectorAll('[data-bol]')).map(function(t){return t.dataset.bol;});
+    var free=Object.entries(_db.bollini||{}).filter(function(e){
+      return !e[1].used&&(!usedInForm.has(e[0])||usedInRow.includes(e[0]));
+    }).sort(function(a,b){return a[0].localeCompare(b[0]);}).slice(0,Math.max(qty,8));
     sug.innerHTML=free.map(function(e){
       return '<button class="bollino-sug" onclick="VD._addById(\''+e[0]+'\',this.closest(\'.card\')); ">'+e[0]+'</button>';
     }).join('');
     var counter=row.querySelector('[data-bol-counter]');
     if(counter){
-      var added=used.length;
+      var added=usedInRow.length;
       if(added===qty){counter.textContent='✅ '+added+'/'+qty;counter.style.color='var(--ok)';}
       else{counter.textContent=added+'/'+qty+(added<qty?' — servono ancora '+(qty-added):'');counter.style.color='var(--warn)';}
     }
@@ -3155,9 +3131,9 @@ const VD={
     if(Array.from(tags.querySelectorAll('[data-bol]')).map(function(t){return t.dataset.bol;}).includes(fullId)){toast('Già aggiunto','w');return;}
     var tag=document.createElement('span');
     tag.className='tag';tag.dataset.bol=fullId;
-    tag.innerHTML=fullId+'<button class="tag-x" onclick="this.parentElement.remove();VD._updateSug(this.closest(\'.card\')); ">×</button>';
+    tag.innerHTML=fullId+'<button class="tag-x" onclick="this.parentElement.remove();VD._updateAllSugs(); ">×</button>';
     tags.appendChild(tag);
-    VD._updateSug(row);
+    VD._updateAllSugs();
   },
   recalc(){
     var tot=0;
