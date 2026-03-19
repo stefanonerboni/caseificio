@@ -273,6 +273,7 @@ select.fc option{font-family:var(--ff)}
     <div class="sv-sep"></div>
     <button class="sv-item" data-sec="bollini"><span class="ni">🏷</span> Bollini</button>
     <button class="sv-item" data-sec="ddt"><span class="ni">📄</span> DDT</button>
+    <button class="sv-item" data-sec="vendita-diretta"><span class="ni">🧾</span> Vendita Diretta</button>
     <button class="sv-item" data-sec="clienti"><span class="ni">👥</span> Clienti</button>
     <div class="sv-sep"></div>
     <button class="sv-item" data-sec="analisi"><span class="ni">🔬</span> Analisi Latte</button>
@@ -339,7 +340,8 @@ select.fc option{font-family:var(--ff)}
       <div id="analisi-tab-grafici" style="display:none"></div>
     </section>
     <section class="sec" id="sec-vendite">
-      <div class="sec-title">💰 Registro Vendite</div>
+      <div class="sec-title">💰 Uscite interne</div>
+      <div class="alert alert-i" style="margin-bottom:10px">Registra qui <b>autoconsumo</b>, <b>assaggi</b> e <b>eliminazioni</b>. Per vendite usa 📄 <b>DDT</b> o 🧾 <b>Vendita Diretta</b>.</div>
       <div class="mnav">
         <button onclick="Sales.prevMonth()">‹</button>
         <div class="mlbl" id="sales-month-label"></div>
@@ -386,6 +388,38 @@ select.fc option{font-family:var(--ff)}
           <button onclick="DDT.nextMonth()">›</button>
         </div>
         <div class="tw" id="ddt-table"></div>
+      </div>
+    </section>
+
+    <!-- ════ VENDITA DIRETTA ════ -->
+    <section class="sec" id="sec-vendita-diretta">
+      <div class="sec-title">🧾 Vendita Diretta / Scontrino</div>
+      <div class="alert alert-i">Registra vendite con scontrino o ricevuta. Bollini assegnati automaticamente. Le uscite appaiono nel registro vendite.</div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Nuova vendita diretta</div></div>
+        <div class="frow">
+          <div class="fg"><label class="fl">Data *</label><input type="date" class="fc" id="vd-date"></div>
+          <div class="fg"><label class="fl">N° Scontrino / Ricevuta</label><input type="text" class="fc" id="vd-ref" placeholder="es. 0042"></div>
+        </div>
+        <div id="vd-rows"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="VD.addRow()">+ Aggiungi riga</button>
+        <hr class="sep">
+        <div class="iva-box" style="margin-bottom:10px">
+          <div class="iva-row total"><span>TOTALE (IVA inclusa)</span><span id="vd-totale">0,00 €</span></div>
+        </div>
+        <div class="fg"><label class="fl">Note</label><textarea class="fc" id="vd-note" rows="2"></textarea></div>
+        <button class="btn btn-p" style="margin-top:4px" onclick="VD.save()">💾 Registra vendita</button>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">📋 Storico vendite dirette</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button onclick="VD.prevMonth()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--green)">‹</button>
+            <span id="vd-month-label" style="font-weight:700;font-size:.9rem;min-width:120px;text-align:center"></span>
+            <button onclick="VD.nextMonth()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--green)">›</button>
+          </div>
+        </div>
+        <div id="vd-list"></div>
       </div>
     </section>
 
@@ -494,7 +528,7 @@ select.fc option{font-family:var(--ff)}
   <button class="nv" data-sec="vendite"><span class="ni">💰</span><span>Vendite</span></button>
   <button class="nv" data-sec="bollini"><span class="ni">🏷</span><span>Bollini</span></button>
   <button class="nv" data-sec="ddt"><span class="ni">📄</span><span>DDT</span></button>
-  <button class="nv" data-sec="analisi"><span class="ni">🔬</span><span>Analisi</span></button>
+  <button class="nv" data-sec="vendita-diretta"><span class="ni">🧾</span><span>Scontrino</span></button>
   <button class="nv" data-sec="report"><span class="ni">📊</span><span>Report</span></button>
 </nav>
 
@@ -587,8 +621,6 @@ select.fc option{font-family:var(--ff)}
           <label class="fl">Tipologia *</label>
           <select class="fc" id="ms-type" onchange="Sales.onTypeChange()">
             <option value="">-- Seleziona --</option>
-            <option value="dop">🏅 DOP</option>
-            <option value="nondop">📦 Non DOP</option>
             <option value="autoconsumo">🧑‍🍳 Autoconsumo</option>
             <option value="assaggi">👅 Assaggi</option>
             <option value="eliminazione">🗑 Eliminazione (non conforme / problemi)</option>
@@ -596,54 +628,6 @@ select.fc option{font-family:var(--ff)}
         </div>
       </div>
       <div class="fg"><label class="fl">Numero forme *</label><input type="number" class="fc" id="ms-qty" min="1" placeholder="1"></div>
-
-      <!-- DOP fields -->
-      <div id="ms-dop-fields" style="display:none">
-        <div id="ms-dop-warn" class="warn-dop" style="display:none"></div>
-        <div class="fg">
-          <label class="fl">Metodo vendita</label>
-          <select class="fc" id="ms-method" onchange="Sales.onMethodChange()">
-            <option value="">-- Seleziona --</option>
-            <option value="ddt">📄 DDT</option>
-            <option value="scontrino">🧾 Scontrino / Ricevuta</option>
-          </select>
-        </div>
-        <div id="ms-ddt-fields" style="display:none">
-          <div class="fg">
-            <label class="fl">Numero DDT</label>
-            <select class="fc" id="ms-ddt-id">
-              <option value="">-- Seleziona DDT --</option>
-            </select>
-          </div>
-        </div>
-        <div id="ms-scontrino-fields" style="display:none">
-          <div class="fg"><label class="fl">Data scontrino</label><input type="date" class="fc" id="ms-scontrino-date"></div>
-        </div>
-        <div class="fg">
-          <label class="fl">Bollini DOP (uno per forma)</label>
-          <div id="ms-bollini-tags" class="chip-container" style="min-height:44px;margin-bottom:6px"></div>
-          <div id="ms-bollini-sug" class="pill-row" style="margin-top:4px"></div>
-          <div class="input-group" style="margin-top:6px">
-            <input type="text" class="fc fc-sm" id="ms-bol-input" placeholder="Aggiungi bollino (es. 0001)" maxlength="4">
-            <button class="btn btn-p btn-sm" onclick="Sales.addBollinoManual()">Aggiungi</button>
-          </div>
-          <div class="mini" style="margin-top:4px">Inserisci solo le 4 cifre del bollino. Anno corrente suggerito.</div>
-        </div>
-      </div>
-
-      <!-- Non-DOP fields -->
-      <div id="ms-nondop-fields" style="display:none">
-        <div class="fg">
-          <label class="fl">Metodo vendita</label>
-          <select class="fc" id="ms-nd-method">
-            <option value="">-- Seleziona --</option>
-            <option value="ddt">📄 DDT</option>
-            <option value="scontrino">🧾 Scontrino / Ricevuta</option>
-            <option value="altro">Altro</option>
-          </select>
-        </div>
-        <div class="fg"><label class="fl">Riferimento (DDT num. o data scontrino)</label><input type="text" class="fc" id="ms-nd-ref" placeholder="es. 05C/26 oppure 15/03/2026"></div>
-      </div>
 
       <div class="fg"><label class="fl">Note</label><textarea class="fc" id="ms-note" rows="2"></textarea></div>
     </div>
@@ -861,7 +845,8 @@ function emptyDB(){
     bollini:{},
     ddt:{},
     clients:{},
-    milkAnalysis:{}
+    milkAnalysis:{},
+    venditeDirecte:{}
   };
 }
 
@@ -937,6 +922,7 @@ const Router = {
     else if(sec==='ddt') DDT.render();
     else if(sec==='clienti') Clients.render();
     else if(sec==='analisi') Analisi.render();
+    else if(sec==='vendita-diretta') VD.render();
     else if(sec==='report') Report.init();
     else if(sec==='impostazioni') Settings.render();
   }
@@ -1440,7 +1426,7 @@ const Sales = {
           <span class="bdg bdg-auto">Auto: ${autoSold}</span>
           ${elimSold?`<span class="bdg bdg-err">Elim: ${elimSold}</span>`:''}
           <span class="bdg bdg-ok">Rim: ${rem}/${forms}</span>
-          <button class="btn btn-a btn-xs" onclick="event.stopPropagation();Sales.openAdd('${id}')">+ Uscita</button>
+          <button class="btn btn-a btn-xs" onclick="event.stopPropagation();Sales.openAdd('${id}')">🧑‍🍳 Auto / Assaggi / Elim.</button>
         </div>
       </div>
       <div class="lot-block-bd" id="lb-${id}">
@@ -1487,17 +1473,7 @@ const Sales = {
     document.getElementById('ms-type').value='';
     document.getElementById('ms-qty').value='1';
     document.getElementById('ms-note').value='';
-    document.getElementById('ms-dop-fields').style.display='none';
-    document.getElementById('ms-nondop-fields').style.display='none';
-    document.getElementById('ms-dop-warn').style.display='none';
-    document.getElementById('ms-bollini-tags').innerHTML='';
-    document.getElementById('ms-bollini-sug').innerHTML='';
-    document.getElementById('ms-bol-input').value='';
-    document.getElementById('ms-method').value='';
-    document.getElementById('ms-ddt-fields').style.display='none';
-    document.getElementById('ms-scontrino-fields').style.display='none';
-    document.getElementById('ms-nd-method').value='';
-    document.getElementById('ms-nd-ref').value='';
+
     // Lot info
     const rem=Mag.remaining(lotId);
     document.getElementById('ms-lot-info').textContent=`Lotto ${isoToLot(lotId)} – Giorno ${days} – ${Mag.dicitura(days)} – Rimanenza: ${rem} forme`;
@@ -1511,27 +1487,7 @@ const Sales = {
     Sales.updateBollinoSuggestions();
   },
   onTypeChange(){
-    const t=document.getElementById('ms-type').value;
-    document.getElementById('ms-dop-fields').style.display=t==='dop'?'block':'none';
-    document.getElementById('ms-nondop-fields').style.display=t==='nondop'?'block':'none';
-    if(t==='dop'){
-      const id=document.getElementById('ms-lot-id').value;
-      const dop=Mag.dopReady(id);
-      const days=daysSince(id);
-      if(!dop){
-        const w=document.getElementById('ms-dop-warn');
-        w.style.display='block';
-        const lot=_db.production[id];
-        let reason='';
-        if(days<5) reason=`Lotto troppo fresco (giorno ${days}, minimo 5)`;
-        else if(!lot||!lot.physConf) reason='Conformità fisiche non ancora inserite';
-        else if(lot.physConf.result==='NC') reason='Conformità fisiche NON CONFORMI';
-        else if(lot.chemConf&&lot.chemConf.result==='NC') reason='Analisi chimiche NON CONFORMI';
-        w.textContent=`⚠ Attenzione: questo lotto non è ancora vendibile come DOP. ${reason}`;
-      } else {
-        document.getElementById('ms-dop-warn').style.display='none';
-      }
-    }
+    // Solo autoconsumo/assaggi/eliminazione — nessun campo extra
   },
   onMethodChange(){
     const m=document.getElementById('ms-method').value;
@@ -1593,25 +1549,7 @@ const Sales = {
       id:uuid(), date, type, qty,
       note:document.getElementById('ms-note').value
     };
-    if(type==='dop'){
-      const tags=Array.from(document.getElementById('ms-bollini-tags').querySelectorAll('[data-bol]')).map(el=>el.dataset.bol);
-      if(tags.length!==qty){toast(`Devi assegnare esattamente ${qty} bollino/i (uno per forma)`,'w');return;}
-      // Mark bollini as used
-      tags.forEach(b=>{
-        if(!_db.bollini[b]) _db.bollini[b]={id:b,used:false};
-        _db.bollini[b].used=true;
-        _db.bollini[b].usedDate=date;
-        _db.bollini[b].lotId=lotId;
-        _db.bollini[b].saleId=sale.id;
-      });
-      sale.bollini=tags;
-      sale.method=document.getElementById('ms-method').value;
-      sale.ddtId=document.getElementById('ms-ddt-id').value||null;
-      sale.scontrinoDate=document.getElementById('ms-scontrino-fields').style.display!=='none'?document.getElementById('ms-scontrino-date').value:null;
-    } else if(type==='nondop'){
-      sale.method=document.getElementById('ms-nd-method').value;
-      sale.ndRef=document.getElementById('ms-nd-ref').value;
-    }
+    // autoconsumo/assaggi/eliminazione: nessun bollino né metodo da registrare
     if(!_db.sales[lotId]) _db.sales[lotId]=[];
     _db.sales[lotId].push(sale);
     Store.saveNow();
@@ -3077,6 +3015,264 @@ const Search={
         </div>
       </div>`).join('');
     Search._results=results;openModal('m-search');
+  }
+};
+
+/* ── VENDITA DIRETTA ── */
+const VD={
+  curYear:YEAR,curMonth:new Date().getMonth(),
+  prevMonth(){VD.curMonth--;if(VD.curMonth<0){VD.curMonth=11;VD.curYear--;}VD.renderList();},
+  nextMonth(){VD.curMonth++;if(VD.curMonth>11){VD.curMonth=0;VD.curYear++;}VD.renderList();},
+  render(){
+    const d=document.getElementById('vd-date');
+    if(d&&!d.value) d.value=today();
+    const rows=document.getElementById('vd-rows');
+    if(rows&&!rows.children.length) VD.addRow();
+    VD.recalc();
+    VD.renderList();
+  },
+  addRow(data){
+    data=data||{};
+    const container=document.getElementById('vd-rows');
+    const idx=container.children.length;
+    const descMap={'Roccaverano DOP fresco':'dop-fresco','Roccaverano DOP affinato':'dop-affinato','Robiola del Merlo Bianco':'nondop'};
+    const selVal=descMap[data.desc]||(data.desc?'custom':'');
+    const isDOP=selVal==='dop-fresco'||selVal==='dop-affinato';
+    const div=document.createElement('div');
+    div.className='card';div.style.marginBottom='8px';div.style.padding='10px';
+    div.innerHTML=
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+      '<span style="font-weight:600;font-size:.82rem">Riga '+(idx+1)+'</span>'+
+      '<button class="btn btn-d btn-xs" onclick="this.closest(\'.card\').remove();VD.recalc()">🗑</button></div>'+
+      '<div class="frow">'+
+      '<div class="fg"><label class="fl">Qty</label><input type="number" class="fc fc-sm" min="1" value="'+(data.qty||1)+'" oninput="VD.recalc();VD._updateSug(this.closest(\'.card\')); "></div>'+
+      '<div class="fg" style="flex:2"><label class="fl">Descrizione</label>'+
+      '<select class="fc fc-sm" onchange="VD.onDesc(this)">'+
+      '<option value="">-- Seleziona --</option>'+
+      '<option value="dop-fresco"'+(selVal==='dop-fresco'?' selected':'')+'>Roccaverano DOP fresco</option>'+
+      '<option value="dop-affinato"'+(selVal==='dop-affinato'?' selected':'')+'>Roccaverano DOP affinato</option>'+
+      '<option value="nondop"'+(selVal==='nondop'?' selected':'')+'>Robiola del Merlo Bianco</option>'+
+      '<option value="custom"'+(selVal==='custom'?' selected':'')+'>Altro</option>'+
+      '</select>'+
+      '<input type="text" class="fc fc-sm" style="margin-top:4px" placeholder="Descrizione libera" value="'+(data.desc||'')+'" data-desc-free></div></div>'+
+      '<div class="frow">'+
+      '<div class="fg" style="flex:2"><label class="fl">Lotto</label>'+
+      '<select class="fc fc-sm" data-lot-sel onchange="VD.onLot(this)"><option value="">-- Scegli lotto --</option></select>'+
+      '<input type="text" class="fc fc-sm" style="margin-top:4px;display:none" placeholder="DD/MM/YYYY" value="'+(data.lot||'')+'" data-lot-input></div>'+
+      '<div class="fg" data-bol-wrap style="display:'+(isDOP?'block':'none')+'">'+
+      '<label class="fl">Bollini DOP <span data-bol-counter class="mini"></span></label>'+
+      '<div data-bol-tags class="pill-row" style="min-height:26px;margin-bottom:4px;flex-wrap:wrap;gap:3px"></div>'+
+      '<div data-bol-sug class="pill-row" style="margin-bottom:4px;gap:3px"></div>'+
+      '<div class="input-group">'+
+      '<input type="text" class="fc fc-sm" data-bol-input placeholder="4 cifre" maxlength="4">'+
+      '<button class="btn btn-p btn-sm" onclick="VD._addManual(this.closest(\'.card\')); ">+</button></div></div>'+
+      '<div class="fg"><label class="fl">Prezzo (IVA incl.)</label><input type="number" class="fc fc-sm" step="0.01" placeholder="0.00" value="'+(data.price||'')+'" oninput="VD.recalc()"></div></div>';
+    container.appendChild(div);
+    const descSel=div.querySelector('select');
+    if(data.desc) VD.onDesc(descSel);
+    else VD._populateLots(div.querySelector('[data-lot-sel]'),'');
+    if(data.lot){const li=div.querySelector('[data-lot-input]');if(li)li.style.display='block';}
+    if(data.bollini&&isDOP){
+      const tags=div.querySelector('[data-bol-tags]');
+      if(tags) data.bollini.forEach(function(b){
+        const tag=document.createElement('span');
+        tag.className='tag';tag.dataset.bol=b;
+        tag.innerHTML=b+'<button class="tag-x" onclick="this.parentElement.remove();VD._updateSug(this.closest(\'.card\')); ">×</button>';
+        tags.appendChild(tag);
+      });
+    }
+    VD._updateSug(div);
+  },
+  onDesc(sel){
+    const row=sel.closest('.card');
+    const free=row.querySelector('[data-desc-free]');
+    const lotSel=row.querySelector('[data-lot-sel]');
+    const map={'dop-fresco':'Roccaverano DOP fresco','dop-affinato':'Roccaverano DOP affinato','nondop':'Robiola del Merlo Bianco'};
+    const typeMap={'dop-fresco':'fresco','dop-affinato':'affinato','nondop':'','custom':'','':''};
+    if(sel.value&&sel.value!=='custom'){free.value=map[sel.value]||'';free.readOnly=true;}
+    else{free.readOnly=false;}
+    VD._populateLots(lotSel,typeMap[sel.value]||'');
+    const li=row.querySelector('[data-lot-input]');if(li){li.value='';li.style.display='none';}
+    const isDOP=sel.value==='dop-fresco'||sel.value==='dop-affinato';
+    const bw=row.querySelector('[data-bol-wrap]');if(bw) bw.style.display=isDOP?'block':'none';
+    if(isDOP) VD._updateSug(row);
+  },
+  onLot(sel){
+    const row=sel.closest('.card');
+    const inp=row.querySelector('[data-lot-input]');
+    if(!inp) return;
+    if(sel.value==='__manual__'){inp.style.display='block';inp.value='';inp.focus();}
+    else if(sel.value){inp.value=sel.value;inp.style.display='none';}
+    else{inp.value='';inp.style.display='none';}
+  },
+  _populateLots(sel,type){
+    if(!sel) return;
+    sel.innerHTML='<option value="">-- Scegli lotto --</option>';
+    Object.entries(_db.production).filter(function(e){return Mag.remaining(e[0])>0;}).sort(function(a,b){return b[0].localeCompare(a[0]);}).forEach(function(entry){
+      var id=entry[0];
+      var days=daysSince(id);
+      var isFresco=days>=5&&days<=9;var isAff=days>=10;
+      if(type==='fresco'&&!isFresco) return;
+      if(type==='affinato'&&!isAff) return;
+      var stato=days<5?'non DOP':isFresco?'fresco':'affinato';
+      var opt=document.createElement('option');
+      opt.value=isoToLot(id);
+      opt.textContent=isoToLot(id)+'  ('+stato+', '+Mag.remaining(id)+' disp., g.'+days+')';
+      sel.appendChild(opt);
+    });
+    var m=document.createElement('option');m.value='__manual__';m.textContent='✏ Inserisci manualmente';sel.appendChild(m);
+  },
+  _updateSug(row){
+    var sug=row.querySelector('[data-bol-sug]');if(!sug) return;
+    var qty=parseInt(row.querySelector('input[type=number]')&&row.querySelector('input[type=number]').value)||1;
+    var used=Array.from(row.querySelectorAll('[data-bol]')).map(function(t){return t.dataset.bol;});
+    var free=Object.entries(_db.bollini||{}).filter(function(e){return !e[1].used&&!used.includes(e[0]);}).sort(function(a,b){return a[0].localeCompare(b[0]);}).slice(0,Math.max(qty,8));
+    sug.innerHTML=free.map(function(e){
+      return '<button class="bollino-sug" onclick="VD._addById(\''+e[0]+'\',this.closest(\'.card\')); ">'+e[0]+'</button>';
+    }).join('');
+    var counter=row.querySelector('[data-bol-counter]');
+    if(counter){
+      var added=used.length;
+      if(added===qty){counter.textContent='✅ '+added+'/'+qty;counter.style.color='var(--ok)';}
+      else{counter.textContent=added+'/'+qty+(added<qty?' — servono ancora '+(qty-added):'');counter.style.color='var(--warn)';}
+    }
+  },
+  _addManual(row){
+    var inp=row.querySelector('[data-bol-input]');if(!inp) return;
+    var val=inp.value.trim();
+    if(val.length!==4||isNaN(val)){toast('Inserisci 4 cifre','w');return;}
+    var matches=Object.keys(_db.bollini||{}).filter(function(id){return id.startsWith('MB'+val);});
+    if(!matches.length){VD._addById('MB'+val.padStart(4,'0')+'/'+String(YEAR).slice(-2),row,true);}
+    else if(matches.length===1){VD._addById(matches[0],row);}
+    else{for(var i=0;i<matches.length;i++){if(confirm('Usare '+matches[i]+'?')){VD._addById(matches[i],row);break;}}}
+    inp.value='';
+  },
+  _addById(fullId,row,force){
+    force=force||false;
+    var b=_db.bollini&&_db.bollini[fullId];
+    if(b&&b.used&&!force){toast('Bollino '+fullId+' già usato','e');return;}
+    var tags=row.querySelector('[data-bol-tags]');if(!tags) return;
+    if(Array.from(tags.querySelectorAll('[data-bol]')).map(function(t){return t.dataset.bol;}).includes(fullId)){toast('Già aggiunto','w');return;}
+    var tag=document.createElement('span');
+    tag.className='tag';tag.dataset.bol=fullId;
+    tag.innerHTML=fullId+'<button class="tag-x" onclick="this.parentElement.remove();VD._updateSug(this.closest(\'.card\')); ">×</button>';
+    tags.appendChild(tag);
+    VD._updateSug(row);
+  },
+  recalc(){
+    var tot=0;
+    document.querySelectorAll('#vd-rows .card').forEach(function(row){
+      var inputs=row.querySelectorAll('input[type=number]');
+      var qty=parseFloat(inputs[0]&&inputs[0].value)||0;
+      var price=parseFloat(inputs[1]&&inputs[1].value)||0;
+      tot+=qty*price;
+    });
+    var el=document.getElementById('vd-totale');if(el) el.textContent=fmtEuro(tot);
+  },
+  save(){
+    var date=document.getElementById('vd-date').value;
+    var ref=document.getElementById('vd-ref').value.trim();
+    if(!date){toast('Inserisci la data','w');return;}
+    var rows=[];
+    var ok=true;
+    document.querySelectorAll('#vd-rows .card').forEach(function(row){
+      if(!ok) return;
+      var qty=parseInt(row.querySelector('input[type=number]')&&row.querySelector('input[type=number]').value)||0;
+      var desc=row.querySelector('[data-desc-free]')&&row.querySelector('[data-desc-free]').value||'';
+      var lotInput=row.querySelector('[data-lot-input]');
+      var lotSel=row.querySelector('[data-lot-sel]');
+      var lot=(lotInput&&lotInput.style.display!=='none'&&lotInput.value)
+        ?lotInput.value
+        :(lotSel&&lotSel.value&&lotSel.value!=='__manual__'?lotSel.value:'');
+      var isDOP=desc.toLowerCase().includes('dop')||desc.toLowerCase().includes('roccaverano');
+      var bollini=[];
+      if(isDOP){
+        bollini=Array.from(row.querySelectorAll('[data-bol]')).map(function(t){return t.dataset.bol;});
+        if(bollini.length!==qty){toast('Riga "'+desc+'": '+bollini.length+' bollini per '+qty+' forme','e');ok=false;return;}
+      }
+      var price=parseFloat(row.querySelectorAll('input[type=number]')[1]&&row.querySelectorAll('input[type=number]')[1].value)||0;
+      if(!lot){toast('Seleziona un lotto per ogni riga','w');ok=false;return;}
+      if(qty<1){toast('Quantità non valida','w');ok=false;return;}
+      rows.push({qty:qty,desc:desc,lot:lot,bollini:bollini,isDOP:isDOP,price:price});
+    });
+    if(!ok||!rows.length) return;
+    var scontrinoId=ref||date;
+    var allOk=true;
+    rows.forEach(function(row){
+      if(!allOk) return;
+      var parts=row.lot.split('/');
+      if(parts.length!==3){toast('Lotto '+row.lot+' non valido','e');allOk=false;return;}
+      var lotId=parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+      if(!_db.production[lotId]){toast('Lotto '+row.lot+' non in produzione','e');allOk=false;return;}
+      var rem=Mag.remaining(lotId);
+      if(row.qty>rem){toast('Lotto '+row.lot+': rimanenza insufficiente ('+rem+' disp.)','e');allOk=false;return;}
+      row.bollini.forEach(function(b){
+        if(!_db.bollini[b]) _db.bollini[b]={id:b,used:false};
+        _db.bollini[b].used=true;_db.bollini[b].usedDate=date;_db.bollini[b].lotId=lotId;
+      });
+      var sale={id:uuid(),date:date,type:row.isDOP?'dop':'nondop',qty:row.qty,
+        bollini:row.isDOP?row.bollini:[],method:'scontrino',
+        ndRef:scontrinoId,note:'Vendita diretta'+(ref?' scontrino '+ref:''),
+        _fromScontrino:scontrinoId};
+      if(!_db.sales[lotId]) _db.sales[lotId]=[];
+      _db.sales[lotId].push(sale);
+    });
+    if(!allOk) return;
+    var totale=rows.reduce(function(s,r){return s+r.qty*r.price;},0);
+    if(!_db.venditeDirecte) _db.venditeDirecte={};
+    var vid=uuid();
+    _db.venditeDirecte[vid]={id:vid,date:date,ref:ref,rows:rows,totale:totale,
+      note:document.getElementById('vd-note').value,scontrinoId:scontrinoId};
+    Store.saveNow();
+    document.getElementById('vd-rows').innerHTML='';
+    document.getElementById('vd-ref').value='';
+    document.getElementById('vd-note').value='';
+    VD.addRow();VD.recalc();VD.renderList();Dash.render();
+    toast('Vendita diretta registrata — '+rows.length+' riga/e in Registro Vendite','s');
+  },
+  renderList(){
+    var y=VD.curYear,m=VD.curMonth;
+    var lbl=document.getElementById('vd-month-label');
+    if(lbl) lbl.textContent=MONTHS_IT[m]+' '+y;
+    var items=Object.values(_db.venditeDirecte||{}).filter(function(v){
+      var d=new Date(v.date);return d.getFullYear()===y&&d.getMonth()===m;
+    }).sort(function(a,b){return b.date.localeCompare(a.date);});
+    var el=document.getElementById('vd-list');if(!el) return;
+    if(!items.length){el.innerHTML='<div class="empty"><div class="ei">🧾</div><p>Nessuna vendita diretta in questo mese</p></div>';return;}
+    var html='<div class="tw"><table><thead><tr><th>Data</th><th>Scontrino</th><th>Righe</th><th>Totale</th><th>Note</th><th></th></tr></thead><tbody>';
+    items.forEach(function(v){
+      var righe=(v.rows||[]).map(function(r){return r.qty+'× '+(r.desc||'—')+' – '+r.lot;}).join('<br>');
+      html+='<tr><td>'+fmtDate(v.date)+'</td><td><span class="mini">'+(v.ref||'—')+'</span></td>';
+      html+='<td><span class="mini">'+righe+'</span></td><td><b>'+fmtEuro(v.totale)+'</b></td>';
+      html+='<td><span class="mini">'+(v.note||'')+'</span></td>';
+      html+='<td><button class="btn btn-d btn-xs" onclick="VD.del(\''+v.id+'\'); ">🗑</button></td></tr>';
+    });
+    html+='</tbody></table></div>';
+    el.innerHTML=html;
+  },
+  del(id){
+    confirm2('Eliminare questa vendita diretta? Le uscite associate verranno rimosse.',function(){
+      var v=_db.venditeDirecte&&_db.venditeDirecte[id];
+      if(v){
+        (v.rows||[]).forEach(function(row){
+          var parts=(row.lot||'').split('/');
+          if(parts.length!==3) return;
+          var lotId=parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+          if(_db.sales[lotId]){
+            _db.sales[lotId].forEach(function(s){
+              if(s._fromScontrino===v.scontrinoId&&s.date===v.date){
+                (s.bollini||[]).forEach(function(b){
+                  if(_db.bollini[b]){_db.bollini[b].used=false;_db.bollini[b].usedDate=null;_db.bollini[b].lotId=null;}
+                });
+              }
+            });
+            _db.sales[lotId]=_db.sales[lotId].filter(function(s){return !(s._fromScontrino===v.scontrinoId&&s.date===v.date);});
+          }
+        });
+        delete _db.venditeDirecte[id];
+      }
+      Store.saveNow();VD.renderList();Dash.render();toast('Vendita eliminata','w');
+    });
   }
 };
 
