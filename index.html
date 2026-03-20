@@ -2443,131 +2443,186 @@ const Drive = {
   _gisClient:null,
   initStatus(){
     if(_db.settings.googleClientId) Drive.loadGIS();
-    // Salva su Drive alla chiusura della pagina
+    // Salva alla chiusura solo se ci sono dati reali
     window.addEventListener('beforeunload',()=>{
-      if(Drive._token && Object.keys(_db.production||{}).length>0) Drive.saveToCloud();
+      if(Drive._token&&Object.keys(_db.production||{}).length>0) Drive.saveToCloud();
     });
-    // Rinnovo silenzioso token ogni 50 minuti (quando app è aperta)
-    Drive._renewInterval=setInterval(()=>Drive._silentRefresh(), 50*60*1000);
-    // All'apertura: tenta sempre rinnovo silenzioso se clientId è configurato
+    // Rinnovo token ogni 50 min se app rimane aperta
+    Drive._renewInterval=setInterval(()=>Drive._silentRefresh(),50*60*1000);
     if(_db.settings.googleClientId){
-      // Aspetta che GIS sia caricato, poi tenta silenziosamente
       Drive._waitGISthenRefresh();
     } else {
       Drive.updateUI('Configura il Client ID in Impostazioni','');
     }
   },
+
+  // Aspetta GIS caricato poi tenta refresh silenzioso (max 8 sec)
   _waitGISthenRefresh(){
-    // Attende che la libreria Google Identity Services sia pronta
     if(window.google&&window.google.accounts){
       Drive._silentRefresh();
     } else {
-      // GIS non ancora caricata, riprova ogni 300ms per max 8 secondi
-      if(!Drive._gisWaitCount) Drive._gisWaitCount=0;
-      Drive._gisWaitCount++;
-      if(Drive._gisWaitCount<27){
-        setTimeout(()=>Drive._waitGISthenRefresh(), 300);
+      if(!Drive._gisWait) Drive._gisWait=0;
+      Drive._gisWait++;
+      if(Drive._gisWait<27){
+        setTimeout(()=>Drive._waitGISthenRefresh(),300);
       } else {
-        // Timeout: usa token salvato se disponibile, altrimenti non connesso
-        if(_db.settings.gdrive&&_db.settings.gdrive.token){
-          Drive._token=_db.settings.gdrive.token;
-          Drive._fileId=_db.settings.gdrive.fileId;
-          Drive.updateUI('☁ Token precedente (clicca Drive per aggiornare)','');
-          setTimeout(()=>Drive._loadOnStartup(),500);
-        } else {
-          Drive.updateUI('Non connesso — clicca ☁ Drive','');
-        }
+        // GIS non caricata entro 8 sec
+        Drive.updateUI('Non connesso — clicca \u2601 Drive','');
       }
     }
   },
+
+  // Tenta rinnovo silenzioso del token (senza popup).
+  // IMPORTANTE: con prompt:'' Google NON chiama callback se la sessione è scaduta.
+  // Usiamo un timeout di 5 sec per gestire questo caso.
   _silentRefresh(){
     if(!_db.settings.googleClientId||!window.google||!window.google.accounts) return;
     Drive.updateUI('\u2601 Connessione Drive...','syncing');
+    let done=false;
+    // Timeout 5 secondi: se GIS non risponde → sessione scaduta
+    const timeout=setTimeout(()=>{
+      if(done) return;
+      done=true;
+      Drive.updateUI('\u26a0 Sessione scaduta — clicca \u2601 Drive','err');
+    },5000);
     try{
       const client=google.accounts.oauth2.initTokenClient({
         client_id:_db.settings.googleClientId,
         scope:'https://www.googleapis.com/auth/drive.file',
         prompt:'',
         callback:(resp)=>{
+          if(done) return;
+          done=true;
+          clearTimeout(timeout);
           if(resp.error){
-            // Rinnovo silenzioso fallito (sessione scaduta o primo accesso)
-            if(_db.settings.gdrive&&_db.settings.gdrive.token){
-              // Usa il vecchio token come fallback temporaneo
-              Drive._token=_db.settings.gdrive.token;
-              Drive._fileId=_db.settings.gdrive.fileId;
-              Drive.updateUI('\u26a0 Sessione scaduta — clicca ☁ Drive per riconnetterti','err');
-            } else {
-              Drive.updateUI('Non connesso — clicca ☁ Drive','');
-            }
+            Drive.updateUI('\u26a0 Sessione scaduta — clicca \u2601 Drive','err');
             return;
           }
-          // Rinnovo silenzioso riuscito — nessun popup mostrato
           Drive._token=resp.access_token;
-          Drive._fileId=_db.settings.gdrive&&_db.settings.gdrive.fileId||null;
-          _db.settings.gdrive=_db.settings.gdrive||{};
+          Drive._fileId=(_db.settings.gdrive&&_db.settings.gdrive.fileId)||null;
+          if(!_db.settings.gdrive) _db.settings.gdrive={};
           _db.settings.gdrive.token=resp.access_token;
           Store.save(_mode,_db);
-          Drive.updateUI('\u2705 Drive connesso','ok');
           document.getElementById('btn-drive').textContent='\u2601 Sync';
-          // Carica/sincronizza dati
-          setTimeout(()=>Drive._loadOnStartup(),500);
+          Drive.updateUI('\u2705 Drive connesso','ok');
+          // Ora sincronizza con logica timestamp
+          Drive._syncOnStartup();
         }
       });
       client.requestAccessToken({prompt:''});
       Drive._gisClient=client;
     }catch(e){
-      Drive.updateUI('\u26a0 Errore init Drive: '+e.message,'err');
+      clearTimeout(timeout);
+      Drive.updateUI('\u26a0 Errore: '+e.message,'err');
     }
   },
-  async _loadOnStartup(){
+
+  // Logica di sync all'avvio: confronta timestamp locale vs Drive e decide
+  async _syncOnStartup(){
     if(!Drive._token) return;
-    Drive.updateUI('\u2601 Verifica Drive...','syncing');
+    Drive.updateUI('\u2601 Confronto dati...','syncing');
     const fileName='merlo-bianco-'+_mode+'.json';
     try{
-      // Recupera metadati Drive (modifiedTime)
-      const s=await fetch('https://www.googleapis.com/drive/v3/files?q=name=\''+fileName+'\'&fields=files(id,modifiedTime)',{headers:{Authorization:'Bearer '+Drive._token}});
+      // 1. Leggi metadati Drive
+      const s=await fetch(
+        'https://www.googleapis.com/drive/v3/files?q=name=\''+fileName+'\'&fields=files(id,modifiedTime)',
+        {headers:{Authorization:'Bearer '+Drive._token}}
+      );
       const sd=await s.json();
-      if(!sd.files||!sd.files.length){ Drive.updateUI('\u2139 Nessun file su Drive',''); return; }
-      const fid=sd.files[0].id;
-      const driveTime=new Date(sd.files[0].modifiedTime).getTime();
-      // Confronta con timestamp locale
-      const localTime=_db._localSavedAt||0;
-      const localLots=Object.keys(_db.production||{}).length;
-      if(localTime>0 && localLots>0 && localTime>driveTime-30000){
-        // Dati locali sono recenti quanto o più recenti di Drive: non sovrascrivere
-        Drive.updateUI('\u2705 Dati locali aggiornati (Drive non applicato)','ok');
-        // Sincronizza i locali su Drive silenziosamente
-        setTimeout(()=>Drive.saveToCloud(),3000);
+
+      // 2. Se non esiste nessun file su Drive → carica il locale
+      if(!sd.files||!sd.files.length){
+        if(Object.keys(_db.production||{}).length>0){
+          await Drive.saveToCloud();
+        } else {
+          Drive.updateUI('\u2139 Nessun dato su Drive','');
+        }
         return;
       }
-      // Drive è più recente: scarica
-      const r=await fetch('https://www.googleapis.com/drive/v3/files/'+fid+'?alt=media',{headers:{Authorization:'Bearer '+Drive._token}});
-      const d=await r.json();
-      if(d&&d.production){
-        const driveLots=Object.keys(d.production||{}).length;
-        // Sicurezza extra: se Drive ha MENO dati dei locali, chiedi conferma
-        if(localLots>0 && driveLots<localLots){
-          const msg='Drive ha '+driveLots+' lotti, questo dispositivo ne ha '+localLots+'. Caricare da Drive (i dati locali verranno sovrascritti)?';
-          if(!confirm(msg)) return;
+
+      const fid=sd.files[0].id;
+      const driveModified=new Date(sd.files[0].modifiedTime).getTime();
+      const localSaved=_db._localSavedAt||0;
+      const localLots=Object.keys(_db.production||{}).length;
+
+      // 3. Nessun timestamp locale (dati vecchi prima dell'aggiornamento)
+      if(localSaved===0){
+        if(localLots===0){
+          // Locale vuoto → scarica da Drive senza chiedere
+          await Drive._downloadAndApply(fid,driveModified);
+        } else {
+          // Locale ha dati ma senza timestamp → chiedi
+          const ok=confirm(
+            'Drive ha dati del '+new Date(driveModified).toLocaleString('it-IT')+
+            '.\nQuesto dispositivo ha '+localLots+' lotti ma nessun timestamp.\n'+
+            'Caricare da Drive? (Annulla per mantenere i dati locali)'
+          );
+          if(ok) await Drive._downloadAndApply(fid,driveModified);
+          else await Drive.saveToCloud();
         }
-        _db=Object.assign(emptyDB(),d);
-        Store.save(_mode,_db);
-        Router.render(Router.current);
-        Drive.updateUI('\u2705 Dati aggiornati da Drive ('+new Date(driveTime).toLocaleTimeString('it-IT')+')','ok');
+        return;
       }
-    }catch(e){ Drive.updateUI('\u26a0 Caricamento da Drive fallito: '+e.message,'err'); }
+
+      // 4. Confronto timestamp: margine di tolleranza 60 secondi
+      const diff=driveModified-localSaved;
+      if(diff>60000){
+        // Drive è più recente di 60 sec → scarica (con conferma se locale ha più lotti)
+        const driveData=await Drive._fetchData(fid);
+        const driveLots=driveData?Object.keys(driveData.production||{}).length:0;
+        if(localLots>driveLots&&localLots>0){
+          const ok=confirm(
+            'Drive ('+new Date(driveModified).toLocaleString('it-IT')+') ha '+driveLots+' lotti.\n'+
+            'Questo dispositivo ha '+localLots+' lotti ('+new Date(localSaved).toLocaleString('it-IT')+').\n'+
+            'Drive sembra più recente ma ha meno lotti. Caricare da Drive?'
+          );
+          if(!ok){ await Drive.saveToCloud(); return; }
+        }
+        if(driveData) await Drive._applyData(driveData,driveModified);
+      } else {
+        // Locale uguale o più recente → carica su Drive
+        await Drive.saveToCloud();
+      }
+    }catch(e){
+      Drive.updateUI('\u26a0 Errore sync: '+e.message,'err');
+    }
   },
+
+  // Scarica e applica i dati da Drive
+  async _downloadAndApply(fid,driveTime){
+    const d=await Drive._fetchData(fid);
+    if(d) await Drive._applyData(d,driveTime);
+  },
+
+  // Scarica dati grezzi da Drive
+  async _fetchData(fid){
+    const r=await fetch(
+      'https://www.googleapis.com/drive/v3/files/'+fid+'?alt=media',
+      {headers:{Authorization:'Bearer '+Drive._token}}
+    );
+    const d=await r.json();
+    return(d&&d.production)?d:null;
+  },
+
+  // Applica i dati scaricati da Drive all'app
+  async _applyData(d,driveTime){
+    _db=Object.assign(emptyDB(),d);
+    Store.save(_mode,_db);
+    Router.render(Router.current);
+    Drive.updateUI('\u2705 Dati da Drive ('+new Date(driveTime).toLocaleTimeString('it-IT')+')','ok');
+  },
+
   loadGIS(){
     if(window.google&&window.google.accounts) return;
     const s=document.createElement('script');
     s.src='https://accounts.google.com/gsi/client';
-    s.async=true;
-    s.defer=true;
+    s.async=true; s.defer=true;
     document.head.appendChild(s);
   },
+
+  // Click manuale "☁ Drive" → mostra popup Google, poi _syncOnStartup
   connect(){
     const clientId=_db.settings.googleClientId;
-    if(!clientId){toast('Configura prima il Google Client ID nelle Impostazioni','w');Router.go('impostazioni');return;}
+    if(!clientId){toast('Configura prima il Client ID nelle Impostazioni','w');Router.go('impostazioni');return;}
     if(!window.google||!window.google.accounts){
       Drive.loadGIS();
       setTimeout(Drive.connect,1500);
@@ -2580,120 +2635,89 @@ const Drive = {
       callback:(resp)=>{
         if(resp.error){toast('Errore autenticazione Google: '+resp.error,'e');return;}
         Drive._token=resp.access_token;
+        if(!_db.settings.gdrive) _db.settings.gdrive={};
         _db.settings.gdrive.token=resp.access_token;
         Store.save(_mode,_db);
-        Drive.updateUI('\u2705 Connesso a Google Drive','ok');
-        document.getElementById('btn-drive').textContent='\u2601 Sync ora';
+        document.getElementById('btn-drive').textContent='\u2601 Sync';
+        Drive.updateUI('\u2705 Connesso','ok');
         toast('Connesso a Google Drive','s');
-        // Se ci sono dati locali, caricali su Drive (non sovrascrivere con Drive)
-        if(Object.keys(_db.production||{}).length>0){
-          Drive.saveToCloud();
-          toast('Dati locali caricati su Drive','s');
-        } else {
-          // Nessun dato locale: scarica da Drive
-          Drive._loadOnStartup();
-        }
+        // Dopo il login manuale: usa sempre la logica timestamp
+        Drive._syncOnStartup();
       }
     });
     Drive._gisClient.requestAccessToken();
   },
+
   disconnect(){
-    if(Drive._token&&window.google){
-      try{ google.accounts.oauth2.revoke(Drive._token,()=>{}); }catch(e){}
-    }
-    Drive._token=null;
-    Drive._fileId=null;
+    if(Drive._token&&window.google){try{google.accounts.oauth2.revoke(Drive._token,()=>{});}catch(e){}}
+    Drive._token=null; Drive._fileId=null;
     _db.settings.gdrive={fileId:null,token:null,email:null};
     Store.save(_mode,_db);
-    Drive.updateUI('Disconnesso');
+    Drive.updateUI('Disconnesso','');
     toast('Disconnesso da Google Drive','w');
   },
+
   scheduleSave(){
     if(!Drive._token) return;
     if(Drive._timer) clearTimeout(Drive._timer);
     Drive._timer=setTimeout(Drive.saveToCloud,3000);
   },
+
   async _dailyBackup(){
     if(!Drive._token) return;
     const key='mb-last-backup-'+_mode;
-    const lastBackup=localStorage.getItem(key)||'';
-    const todayStr=today();
-    if(lastBackup===todayStr) return;
-    const backupName='merlo-bianco-backup-'+_mode+'-'+todayStr+'.json';
-    const data=JSON.stringify(_db);
+    if(localStorage.getItem(key)===today()) return;
+    const backupName='merlo-bianco-backup-'+_mode+'-'+today()+'.json';
     try{
       const form=new FormData();
       form.append('metadata',new Blob([JSON.stringify({name:backupName,mimeType:'application/json'})],{type:'application/json'}));
-      form.append('file',new Blob([data],{type:'application/json'}));
-      const resp=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+Drive._token},body:form});
+      form.append('file',new Blob([JSON.stringify(_db)],{type:'application/json'}));
+      const resp=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        {method:'POST',headers:{Authorization:'Bearer '+Drive._token},body:form});
       const result=await resp.json();
-      if(result.id){
-        localStorage.setItem(key,todayStr);
-        toast('\u2705 Backup giornaliero salvato su Drive','s');
-      }
-    }catch(e){ console.warn('Backup giornaliero fallito:',e.message); }
+      if(result.id){localStorage.setItem(key,today());toast('\u2705 Backup giornaliero salvato su Drive','s');}
+    }catch(e){console.warn('Backup fallito:',e.message);}
   },
+
   async saveToCloud(){
     if(!Drive._token) return;
     Drive.updateUI('\u2601 Salvataggio...','syncing');
-    const data=JSON.stringify(_db);
     const fileName='merlo-bianco-'+_mode+'.json';
     try{
-      let fileId=Drive._fileId||_db.settings.gdrive.fileId;
+      let fileId=Drive._fileId||(_db.settings.gdrive&&_db.settings.gdrive.fileId)||null;
       if(!fileId){
-        // Search for existing file
-        const search=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}'&fields=files(id,name)`,{
-          headers:{Authorization:`Bearer ${Drive._token}`}
-        });
-        const sData=await search.json();
-        if(sData.files&&sData.files.length>0) fileId=sData.files[0].id;
+        const sr=await fetch('https://www.googleapis.com/drive/v3/files?q=name=\''+fileName+'\'&fields=files(id)',
+          {headers:{Authorization:'Bearer '+Drive._token}});
+        const sd=await sr.json();
+        if(sd.files&&sd.files.length>0) fileId=sd.files[0].id;
       }
-      const meta={name:fileName,mimeType:'application/json'};
       const form=new FormData();
-      form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
-      form.append('file',new Blob([data],{type:'application/json'}));
+      form.append('metadata',new Blob([JSON.stringify({name:fileName,mimeType:'application/json'})],{type:'application/json'}));
+      form.append('file',new Blob([JSON.stringify(_db)],{type:'application/json'}));
       const url=fileId
-        ?`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+        ?'https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart'
         :'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-      const method=fileId?'PATCH':'POST';
-      const resp=await fetch(url,{method,headers:{Authorization:`Bearer ${Drive._token}`},body:form});
+      const resp=await fetch(url,{method:fileId?'PATCH':'POST',headers:{Authorization:'Bearer '+Drive._token},body:form});
       const result=await resp.json();
       if(result.id){
         Drive._fileId=result.id;
         _db.settings.gdrive.fileId=result.id;
         localStorage.setItem(Store.key(_mode),JSON.stringify(_db));
-        const t=new Date().toLocaleTimeString('it-IT');
-        Drive.updateUI('\u2705 Sincronizzato alle '+t,'ok');
+        Drive.updateUI('\u2705 Sincronizzato '+new Date().toLocaleTimeString('it-IT'),'ok');
         Drive._dailyBackup();
       } else {
-        Drive.updateUI('⚠ Errore sync: '+JSON.stringify(result.error||result),'err');
+        Drive.updateUI('\u26a0 Errore upload','err');
       }
     }catch(e){
-      Drive.updateUI('⚠ Errore rete: '+e.message,'err');
+      Drive.updateUI('\u26a0 Rete: '+e.message,'err');
     }
   },
-  async loadFromCloud(){
-    if(!Drive._token){toast('Non connesso a Drive','w');return;}
-    const fileName='merlo-bianco-'+_mode+'.json';
-    try{
-      const s=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${fileName}'&fields=files(id)`,{
-        headers:{Authorization:`Bearer ${Drive._token}`}
-      });
-      const sd=await s.json();
-      if(!sd.files||!sd.files.length){toast('Nessun file trovato su Drive','w');return;}
-      const fid=sd.files[0].id;
-      const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{
-        headers:{Authorization:`Bearer ${Drive._token}`}
-      });
-      const d=await r.json();
-      confirm2('Sovrascrivere il database locale con i dati da Drive?',()=>{
-        _db=Object.assign(emptyDB(),d);
-        Store.save(_mode,_db);
-        Router.render(Router.current);
-        toast('Database sincronizzato da Drive','s');
-      });
-    }catch(e){toast('Errore caricamento da Drive: '+e.message,'e');}
+
+  loadFromCloud(){
+    // Mantenuto per compatibilità con il pulsante in Impostazioni
+    Drive._syncOnStartup();
   },
+
   updateUI(msg,state){
     const el=document.getElementById('drive-status');
     if(el) el.textContent=msg;
