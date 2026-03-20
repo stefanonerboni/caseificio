@@ -2442,40 +2442,81 @@ const Drive = {
   _timer:null,
   _gisClient:null,
   initStatus(){
-    if(_db.settings.gdrive&&_db.settings.gdrive.token){
-      Drive._token=_db.settings.gdrive.token;
-      Drive._fileId=_db.settings.gdrive.fileId;
-      Drive.updateUI('Connesso. Sync automatico attivo.','ok');
-    } else {
-      Drive.updateUI('Non connesso','');
-    }
     if(_db.settings.googleClientId) Drive.loadGIS();
-    // Rinnovo silenzioso token ogni 50 minuti
-    Drive._renewInterval=setInterval(()=>{
-      if(_db.settings.googleClientId&&window.google&&window.google.accounts){
-        Drive._gisClient=google.accounts.oauth2.initTokenClient({
-          client_id:_db.settings.googleClientId,
-          scope:'https://www.googleapis.com/auth/drive.file',
-          prompt:'',
-          callback:(resp)=>{
-            if(!resp.error){
-              Drive._token=resp.access_token;
-              _db.settings.gdrive.token=resp.access_token;
-              Store.save(_mode,_db);
-              Drive.updateUI('\u2705 Token rinnovato '+new Date().toLocaleTimeString('it-IT'),'ok');
-            }
-          }
-        });
-        Drive._gisClient.requestAccessToken({prompt:''});
-      }
-    },50*60*1000);
     // Salva su Drive alla chiusura della pagina
     window.addEventListener('beforeunload',()=>{
       if(Drive._token && Object.keys(_db.production||{}).length>0) Drive.saveToCloud();
     });
-    // Carica da Drive all'apertura se token disponibile
-    if(_db.settings.gdrive&&_db.settings.gdrive.token){
-      setTimeout(()=>Drive._loadOnStartup(),1000);
+    // Rinnovo silenzioso token ogni 50 minuti (quando app è aperta)
+    Drive._renewInterval=setInterval(()=>Drive._silentRefresh(), 50*60*1000);
+    // All'apertura: tenta sempre rinnovo silenzioso se clientId è configurato
+    if(_db.settings.googleClientId){
+      // Aspetta che GIS sia caricato, poi tenta silenziosamente
+      Drive._waitGISthenRefresh();
+    } else {
+      Drive.updateUI('Configura il Client ID in Impostazioni','');
+    }
+  },
+  _waitGISthenRefresh(){
+    // Attende che la libreria Google Identity Services sia pronta
+    if(window.google&&window.google.accounts){
+      Drive._silentRefresh();
+    } else {
+      // GIS non ancora caricata, riprova ogni 300ms per max 8 secondi
+      if(!Drive._gisWaitCount) Drive._gisWaitCount=0;
+      Drive._gisWaitCount++;
+      if(Drive._gisWaitCount<27){
+        setTimeout(()=>Drive._waitGISthenRefresh(), 300);
+      } else {
+        // Timeout: usa token salvato se disponibile, altrimenti non connesso
+        if(_db.settings.gdrive&&_db.settings.gdrive.token){
+          Drive._token=_db.settings.gdrive.token;
+          Drive._fileId=_db.settings.gdrive.fileId;
+          Drive.updateUI('☁ Token precedente (clicca Drive per aggiornare)','');
+          setTimeout(()=>Drive._loadOnStartup(),500);
+        } else {
+          Drive.updateUI('Non connesso — clicca ☁ Drive','');
+        }
+      }
+    }
+  },
+  _silentRefresh(){
+    if(!_db.settings.googleClientId||!window.google||!window.google.accounts) return;
+    Drive.updateUI('\u2601 Connessione Drive...','syncing');
+    try{
+      const client=google.accounts.oauth2.initTokenClient({
+        client_id:_db.settings.googleClientId,
+        scope:'https://www.googleapis.com/auth/drive.file',
+        prompt:'',
+        callback:(resp)=>{
+          if(resp.error){
+            // Rinnovo silenzioso fallito (sessione scaduta o primo accesso)
+            if(_db.settings.gdrive&&_db.settings.gdrive.token){
+              // Usa il vecchio token come fallback temporaneo
+              Drive._token=_db.settings.gdrive.token;
+              Drive._fileId=_db.settings.gdrive.fileId;
+              Drive.updateUI('\u26a0 Sessione scaduta — clicca ☁ Drive per riconnetterti','err');
+            } else {
+              Drive.updateUI('Non connesso — clicca ☁ Drive','');
+            }
+            return;
+          }
+          // Rinnovo silenzioso riuscito — nessun popup mostrato
+          Drive._token=resp.access_token;
+          Drive._fileId=_db.settings.gdrive&&_db.settings.gdrive.fileId||null;
+          _db.settings.gdrive=_db.settings.gdrive||{};
+          _db.settings.gdrive.token=resp.access_token;
+          Store.save(_mode,_db);
+          Drive.updateUI('\u2705 Drive connesso','ok');
+          document.getElementById('btn-drive').textContent='\u2601 Sync';
+          // Carica/sincronizza dati
+          setTimeout(()=>Drive._loadOnStartup(),500);
+        }
+      });
+      client.requestAccessToken({prompt:''});
+      Drive._gisClient=client;
+    }catch(e){
+      Drive.updateUI('\u26a0 Errore init Drive: '+e.message,'err');
     }
   },
   async _loadOnStartup(){
