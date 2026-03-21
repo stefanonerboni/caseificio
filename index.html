@@ -278,6 +278,7 @@ select.fc option{font-family:var(--ff)}
     <button class="sv-item" data-sec="conformita"><span class="ni">✅</span> Conformità</button>
     <button class="sv-item" data-sec="magazzino"><span class="ni">📦</span> Magazzino</button>
     <button class="sv-item" data-sec="vendite"><span class="ni">💰</span> Vendite</button>
+    <button class="sv-item" data-sec="note"><span class="ni">📝</span> Note</button>
     <div class="sv-sep"></div>
     <button class="sv-item" data-sec="bollini"><span class="ni">🏷</span> Bollini</button>
     <button class="sv-item" data-sec="ddt"><span class="ni">📄</span> DDT</button>
@@ -324,14 +325,7 @@ select.fc option{font-family:var(--ff)}
     <section class="sec" id="sec-conformita">
       <div class="sec-title">✅ Conformità</div>
       <div id="conf-alerts" class="alert-strip"></div>
-      <div class="tab-bar">
-        <button class="tab-btn on" onclick="Conf.showTab('fisiche',this)">🏋 Fisiche</button>
-        <button class="tab-btn" onclick="Conf.showTab('organolettiche',this)">👅 Organolettiche</button>
-        <button class="tab-btn" onclick="Conf.showTab('chimiche',this)">⚗ Chimiche</button>
-      </div>
-      <div id="conf-tab-fisiche"></div>
-      <div id="conf-tab-organolettiche" style="display:none"></div>
-      <div id="conf-tab-chimiche" style="display:none"></div>
+      <div id="conf-table-wrap"></div>
     </section>
 
     <!-- ════ ANALISI LATTE ════ -->
@@ -356,7 +350,18 @@ select.fc option{font-family:var(--ff)}
         <button onclick="Sales.nextMonth()">›</button>
       </div>
       <div id="sales-stats" class="stats-row"></div>
-      <div id="sales-lots"></div>
+      <div class="tab-bar">
+        <button class="tab-btn on" onclick="Sales.showTab('lotti',this)">📦 Per lotto</button>
+        <button class="tab-btn" onclick="Sales.showTab('giorno',this)">📅 Per giorno</button>
+      </div>
+      <div id="sales-tab-lotti"></div>
+      <div id="sales-tab-giorno" style="display:none"></div>
+    </section>
+
+    <!-- ════ NOTE ════ -->
+    <section class="sec" id="sec-note">
+      <div class="sec-title">📝 Note sui lotti</div>
+      <div id="note-table-wrap"></div>
     </section>
 
     <!-- ════ MAGAZZINO ════ -->
@@ -454,7 +459,8 @@ select.fc option{font-family:var(--ff)}
         </div>
         <div class="pill-row" style="gap:7px;margin-top:8px">
           <button class="btn btn-p btn-sm" onclick="Report.pdfProd()">📄 Produzione</button>
-          <button class="btn btn-a btn-sm" onclick="Report.pdfSales()">📄 Vendite</button>
+          <button class="btn btn-a btn-sm" onclick="Report.pdfSalesLotti()">📄 Vendite per lotto</button>
+          <button class="btn btn-a btn-sm" onclick="Report.pdfSalesGiorno()">📄 Vendite per giorno</button>
           <button class="btn btn-ghost btn-sm" onclick="Report.pdfDisciplinare()">📄 Disciplinare DOP</button>
           <button class="btn btn-ghost btn-sm" onclick="Report.pdfBollini()">📄 Bollini</button>
           <button class="btn btn-ghost btn-sm" onclick="Report.pdfAnalisi()">📄 Analisi Latte</button>
@@ -534,6 +540,7 @@ select.fc option{font-family:var(--ff)}
   <button class="nv" data-sec="produzione"><span class="ni">🏭</span><span>Prod.</span></button>
   <button class="nv" data-sec="conformita"><span class="ni">✅</span><span>Conf.</span></button>
   <button class="nv" data-sec="vendite"><span class="ni">💰</span><span>Vendite</span></button>
+  <button class="nv" data-sec="note"><span class="ni">📝</span><span>Note</span></button>
   <button class="nv" data-sec="bollini"><span class="ni">🏷</span><span>Bollini</span></button>
   <button class="nv" data-sec="ddt"><span class="ni">📄</span><span>DDT</span></button>
   <button class="nv" data-sec="vendita-diretta"><span class="ni">🧾</span><span>Scontrino</span></button>
@@ -757,6 +764,33 @@ select.fc option{font-family:var(--ff)}
   </div>
 </div>
 
+<!-- Sync Choice Modal -->
+<div class="moverlay" id="m-sync-choice">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hd">
+      <div class="modal-title">☁ Scegli quale database usare</div>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--txt-2);margin-bottom:14px">Trovati dati sia in locale che su Drive. Quale vuoi usare?</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div id="sc-local" style="border:2px solid var(--border);border-radius:var(--r);padding:12px;background:var(--bg)">
+          <div style="font-weight:700;font-size:.8rem;color:var(--green);margin-bottom:6px">📱 QUESTO DISPOSITIVO</div>
+          <div id="sc-local-info" style="font-size:.8rem;line-height:1.6;color:var(--txt-2)"></div>
+        </div>
+        <div id="sc-drive" style="border:2px solid var(--border);border-radius:var(--r);padding:12px;background:var(--bg)">
+          <div style="font-weight:700;font-size:.8rem;color:var(--blue);margin-bottom:6px">☁ GOOGLE DRIVE</div>
+          <div id="sc-drive-info" style="font-size:.8rem;line-height:1.6;color:var(--txt-2)"></div>
+        </div>
+      </div>
+      <div class="alert alert-w" style="font-size:.8rem;margin-bottom:0">⚠ Il database non scelto verrà sovrascritto. Questa scelta non è reversibile (salvo backup).</div>
+    </div>
+    <div class="modal-ft" style="gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="Drive._chooseLocal()">📱 Usa Locale</button>
+      <button class="btn btn-p" style="flex:1" onclick="Drive._chooseDrive()">☁ Usa Drive</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm Modal -->
 <div class="moverlay" id="m-confirm">
   <div class="modal" style="max-width:380px">
@@ -929,6 +963,7 @@ const Router = {
     else if(sec==='produzione') Prod.render();
     else if(sec==='conformita') Conf.render();
     else if(sec==='vendite') Sales.render();
+    else if(sec==='note') Notes.render();
     else if(sec==='magazzino') Mag.render();
     else if(sec==='bollini') Bol.render();
     else if(sec==='ddt') DDT.render();
@@ -1132,7 +1167,7 @@ const Prod = {
     const y=Prod.curYear, m=Prod.curMonth;
     return Object.entries(_db.production)
       .filter(([id])=>{ const d=new Date(id); return d.getFullYear()===y && d.getMonth()===m; })
-      .sort((a,b)=>a[0].localeCompare(b[0]));
+      .sort((a,b)=>b[0].localeCompare(a[0]));
   },
   render(){
     document.getElementById('prod-month-label').textContent=`${MONTHS_IT[Prod.curMonth]} ${Prod.curYear}`;
@@ -1154,13 +1189,13 @@ const Prod = {
     document.getElementById('prod-table-wrap').innerHTML=`<table>
       <thead><tr>
         <th>Lotto</th><th>Litri</th><th>Forme</th><th>Siero</th><th>Caglio</th><th>Coag.</th><th>Stampi</th>
-        <th>Conf.Fis</th><th>Conf.Org</th><th>Conf.Chim</th><th>Kg</th><th>Azioni</th>
+        <th>Conf.Fis</th><th>Conf.Org</th><th>Conf.Chim</th><th>Kg</th><th>Note</th><th>Azioni</th>
       </tr></thead>
       <tbody>${lots.map(([id,l])=>Prod.renderRow(id,l)).join('')}</tbody>
       <tfoot class="tfoot"><tr>
         <td colspan="2"><b>TOTALI MESE</b></td>
         <td>${totalL.toFixed(0)} L</td><td>${totalF}</td>
-        <td colspan="7"></td><td>${totalKg} kg</td><td></td>
+        <td colspan="8"></td><td>${totalKg} kg</td><td></td>
       </tr></tfoot>
     </table>`;
   },
@@ -1179,6 +1214,7 @@ const Prod = {
       <td><span class="mini">${l.stampiRest||'—'}</span></td>
       <td>${ph}</td><td>${or}</td><td>${ch}</td>
       <td>${((l.forms||0)*0.31).toFixed(2)}</td>
+      <td><span class="mini" style="color:var(--txt-2)">${l.note||''}</span></td>
       <td>
         <div style="display:flex;gap:3px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-xs" onclick="Prod.openEdit('${id}')">✏</button>
@@ -1358,21 +1394,22 @@ const Mag = {
     let html='';
     ['tavoli','asciugatura','cella'].forEach(pos=>{
       const items=groups[pos];
-      html+=`<div class="card"><div class="card-hd"><div class="card-title">${labels[pos]}</div></div>`;
-      if(!items.length){ html+='<p class="mini">Nessun lotto in questa posizione</p></div>'; return; }
-      html+=`<div class="wh-grid">`;
-      items.forEach(({id,lot,days,rem})=>{
-        const dic=Mag.dicitura(days);
+      html+=`<div class="card" style="margin-bottom:10px"><div class="card-hd"><div class="card-title">${labels[pos]}</div></div>`;
+      if(!items.length){ html+='<p class="mini" style="padding:6px 0">Nessun lotto in questa posizione</p></div>'; return; }
+      // Riga lotti + riga forme in tabella compatta
+      const totRem=items.reduce((s,x)=>s+x.rem,0);
+      html+=`<div class="tw"><table style="font-size:.82rem">`;
+      html+=`<thead><tr><th style="width:80px"></th>${items.map(({id,days})=>`<th><b>${isoToLot(id)}</b><br><span class="mini" style="font-weight:400">g.${days}</span></th>`).join('')}<th style="background:var(--surface)"><b>Tot.</b></th></tr></thead>`;
+      html+=`<tbody>`;
+      // Riga stato/dicitura
+      html+=`<tr><td class="mini" style="color:var(--txt-3)">Tipo</td>${items.map(({id,days})=>{
         const dop=Mag.dopReady(id);
-        html+=`<div class="wh-card ${pos}">
-          <div style="font-weight:700;font-size:.9rem">${isoToLot(id)}</div>
-          <div class="mini">Giorno ${days}</div>
-          <div style="margin:6px 0"><span class="bdg bdg-amber">${dic}</span> <span class="bdg bdg-gray">${rem} forme</span></div>
-          <div>${dop?'<span class="bdg bdg-ok">✅ DOP pronta</span>':'<span class="bdg bdg-err">❌ Non DOP</span>'}</div>
-          ${dop?`<div class="mini" style="margin-top:4px">${Mag.dopDicitura(days)}</div>`:''}
-        </div>`;
-      });
-      html+=`</div></div>`;
+        const dic=Mag.dicitura(days);
+        return `<td><span class="bdg ${dop?'bdg-ok':'bdg-err'}" style="font-size:.65rem">${dic}</span></td>`;
+      }).join('')}<td></td></tr>`;
+      // Riga forme rimanenti
+      html+=`<tr><td class="mini" style="color:var(--txt-3)">Forme</td>${items.map(({rem})=>`<td><b>${rem}</b></td>`).join('')}<td><b>${totRem}</b></td></tr>`;
+      html+=`</tbody></table></div></div>`;
     });
     document.getElementById('mag-sections').innerHTML=html||'<div class="empty"><div class="ei">📦</div><p>Magazzino vuoto</p></div>';
   }
@@ -1393,6 +1430,14 @@ const Sales = {
     });
     return [...set].sort((a,b)=>b.localeCompare(a));
   },
+  curTab:'lotti',
+  showTab(tab,btn){
+    Sales.curTab=tab;
+    ['lotti','giorno'].forEach(t=>{document.getElementById('sales-tab-'+t).style.display=t===tab?'block':'none';});
+    document.querySelectorAll('#sec-vendite .tab-btn').forEach(b=>b.classList.remove('on'));
+    if(btn) btn.classList.add('on');
+    Sales._renderTab(tab);
+  },
   render(){
     document.getElementById('sales-month-label').textContent=`${MONTHS_IT[Sales.curMonth]} ${Sales.curYear}`;
     const ids=Sales.getLotIds();
@@ -1410,11 +1455,28 @@ const Sales = {
       <div class="stat teal"><div class="stat-v">${totND}</div><div class="stat-l">Forme non DOP</div></div>
       <div class="stat red"><div class="stat-v">${totRem}</div><div class="stat-l">Rimanenza totale</div></div>
     `;
-    if(!ids.length){
-      document.getElementById('sales-lots').innerHTML='<div class="empty"><div class="ei">💰</div><p>Nessuna produzione o vendita in questo mese</p></div>';
-      return;
+    Sales._renderTab(Sales.curTab);
+  },
+  _renderTab(tab){
+    const ids=Sales.getLotIds();
+    if(tab==='lotti'){
+      const el=document.getElementById('sales-tab-lotti');
+      if(!ids.length){ el.innerHTML='<div class="empty"><div class="ei">💰</div><p>Nessuna produzione o vendita in questo mese</p></div>'; return; }
+      el.innerHTML=ids.map(id=>Sales.renderLotBlock(id)).join('');
+    } else {
+      const el=document.getElementById('sales-tab-giorno');
+      // Raccogli tutte le uscite del mese, ordina per data DESC
+      const allRows=[];
+      ids.forEach(id=>{
+        (_db.sales[id]||[]).forEach(s=>allRows.push({id,s}));
+      });
+      allRows.sort((a,b)=>b.s.date.localeCompare(a.s.date));
+      if(!allRows.length){ el.innerHTML='<div class="empty"><div class="ei">📅</div><p>Nessuna uscita in questo mese</p></div>'; return; }
+      el.innerHTML=`<div class="tw"><table>
+        <thead><tr><th>Data</th><th>Lotto</th><th>Tipo</th><th>Qty</th><th>Bollini</th><th>Metodo</th><th>Rif.</th><th>Note</th><th></th></tr></thead>
+        <tbody>${allRows.map(({id,s})=>Sales.renderSaleRow(id,s)).join('')}</tbody>
+      </table></div>`;
     }
-    document.getElementById('sales-lots').innerHTML=ids.map(id=>Sales.renderLotBlock(id)).join('');
   },
   renderLotBlock(id){
     const lot=_db.production[id];
@@ -1456,17 +1518,21 @@ const Sales = {
     const bollini=(s.bollini||[]).map(b=>`<span class="bdg bdg-amber">${b}</span>`).join(' ');
     const rif=s.ddtId||s.ndRef||s.scontrinoDate||'—';
     const isFromDDT=!!s._fromDDT;
+    const isFromScontrino=!!s._fromScontrino;
     const deleteBtn=isFromDDT
-      ?`<span class="mini" style="color:var(--txt-3)" title="Uscita generata da DDT ${s._fromDDT} — elimina il DDT per rimuoverla">📄 ${s._fromDDT}</span>`
+      ?`<span class="mini" style="color:var(--txt-3)" title="Da DDT ${s._fromDDT}">📄 ${s._fromDDT}</span>`
+      :isFromScontrino
+      ?`<span class="mini" style="color:var(--txt-3)" title="Da vendita diretta">🧾</span>`
       :`<button class="btn btn-d btn-xs" onclick="Sales.deleteSale('${lid}','${s.id}')">🗑</button>`;
     return `<tr${isFromDDT?' style="background:rgba(45,80,22,.03)"':''}>
-      <td>${fmtDate(s.date)}</td>
-      <td>${typeMap[s.type]||s.type}${isFromDDT?' <span class="bdg bdg-blue" style="font-size:.6rem">DDT</span>':''}</td>
+      <td><span class="mini">${fmtDate(s.date)}</span></td>
+      <td><b style="font-size:.8rem">${isoToLot(lid)}</b></td>
+      <td>${typeMap[s.type]||s.type}${isFromDDT?' <span class="bdg bdg-blue" style="font-size:.6rem">DDT</span>':isFromScontrino?' <span class="bdg bdg-blue" style="font-size:.6rem">🧾</span>':''}</td>
       <td><b>${s.qty}</b></td>
-      <td>${bollini||'—'}</td>
+      <td><span class="mini">${bollini||'—'}</span></td>
       <td><span class="mini">${s.method||'—'}</span></td>
       <td><span class="mini">${rif}</span></td>
-      <td><span class="mini">${isFromDDT?'':''}${s.note||''}</span></td>
+      <td><span class="mini">${s.note||''}</span></td>
       <td>${deleteBtn}</td>
     </tr>`;
   },
@@ -2213,70 +2279,126 @@ const Report = {
     const lots=Report.getLots(r.from,r.to);
     if(!lots.length){toast('Nessun lotto nel periodo selezionato','w');return;}
     const{jsPDF}=window.jspdf;
-    const doc=new jsPDF({unit:'mm',format:'a4'});
+    const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
     const pw=doc.internal.pageSize.getWidth();
     Report.pdfHeader(doc,'REGISTRO PRODUZIONE',r.from,r.to);
     const rows=lots.map(([id,l])=>[
       isoToLot(id), l.liters||'—', l.forms||'—',
       l.sieroInnesto?'Sì':'No', l.caglioLot||'—', l.coagHours||'—', l.stampiRest||'—',
-      l.physConf?`${l.physConf.result} (${fmtDate(l.physConf.date)})`:'—',
-      l.orgConf?`${l.orgConf.result}`:'—',
-      l.chemConf?`${l.chemConf.result}`:'—',
-      ((l.forms||0)*0.31).toFixed(2)
+      l.physConf?l.physConf.result+' ('+fmtDate(l.physConf.date)+')'  :'—',
+      l.orgConf ?l.orgConf.result :'—',
+      l.chemConf?l.chemConf.result:'—',
+      ((l.forms||0)*0.31).toFixed(2),
+      l.note||''
     ]);
     const totL=lots.reduce((s,[,l])=>s+Number(l.liters||0),0);
     const totF=lots.reduce((s,[,l])=>s+Number(l.forms||0),0);
-    rows.push(['TOTALE',totL.toFixed(0),totF,'','','','','','','', (totF*0.31).toFixed(2)]);
+    rows.push(['TOTALE',totL.toFixed(0),totF,'','','','','','','',(totF*0.31).toFixed(2),'']);
     doc.autoTable({
       startY:38,
-      head:[['Lotto','Litri','Forme','Siero','Caglio','Coag.','Stampi','Conf.Fis','Conf.Org','Conf.Chim','Kg']],
+      head:[['Lotto','Litri','Forme','Siero','Caglio','Ore Coag.','Ore Stampi','Conf.Fis','Conf.Org','Conf.Chim','Kg','Note']],
       body:rows,
       styles:{fontSize:7,cellPadding:1.5},
       headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'},
+      columnStyles:{11:{cellWidth:40}},
       didParseCell(d){ if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,210,190];} }
     });
-    doc.save(`produzione-${r.from}-${r.to}.pdf`);
+    doc.save('produzione-'+r.from+'-'+r.to+'.pdf');
     toast('PDF Produzione generato','s');
   },
-  pdfSales(){
+  // Vendite per lotto: lotto → forme prodotte, uscite DOP/nonDOP/altro, rimanenza
+  pdfSalesLotti(){
+    const r=Report.getRange();if(!r)return;
+    const lots=Report.getLots(r.from,r.to);
+    if(!lots.length){toast('Nessun lotto nel periodo','w');return;}
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:'mm',format:'a4'});
+    Report.pdfHeader(doc,'VENDITE PER LOTTO',r.from,r.to);
+    const rows=[];
+    let totF=0,totDOP=0,totND=0,totAlt=0,totRim=0;
+    lots.forEach(([id,l])=>{
+      const slist=_db.sales[id]||[];
+      const forme=Number(l.forms||0);
+      const dop=slist.filter(s=>s.type==='dop').reduce((s,x)=>s+Number(x.qty||0),0);
+      const nd=slist.filter(s=>s.type==='nondop').reduce((s,x)=>s+Number(x.qty||0),0);
+      const alt=slist.filter(s=>s.type!=='dop'&&s.type!=='nondop').reduce((s,x)=>s+Number(x.qty||0),0);
+      const rim=Math.max(0,forme-dop-nd-alt);
+      rows.push([isoToLot(id),forme,dop,nd,alt,rim]);
+      totF+=forme;totDOP+=dop;totND+=nd;totAlt+=alt;totRim+=rim;
+    });
+    rows.push(['TOTALE',totF,totDOP,totND,totAlt,totRim]);
+    const pw=doc.internal.pageSize.getWidth();
+    doc.autoTable({
+      startY:38,
+      head:[['Lotto','Forme prod.','Uscite DOP','Uscite Non DOP','Uscite Altro','Rimanenza']],
+      body:rows,
+      styles:{fontSize:8,cellPadding:2},
+      headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'},
+      didParseCell(d){ if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,210,190];} }
+    });
+    // Riga totali dettagliata sotto la tabella
+    const finalY=doc.lastAutoTable.finalY+8;
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(60,60,60);
+    doc.text(
+      'Totali: DOP '+totDOP+' forme ('+( totDOP*0.28).toFixed(2)+' kg)  |  '+
+      'Non DOP '+totND+' forme ('+(totND*0.28).toFixed(2)+' kg)  |  '+
+      'Altro '+totAlt+' forme  |  Rimanenze '+totRim+' forme',
+      14,finalY
+    );
+    doc.save('vendite-per-lotto-'+r.from+'-'+r.to+'.pdf');
+    toast('PDF Vendite per lotto generato','s');
+  },
+
+  // Vendite per giorno: tabella cronologica di tutte le uscite
+  pdfSalesGiorno(){
     const r=Report.getRange();if(!r)return;
     const lots=Report.getLots(r.from,r.to);
     if(!lots.length){toast('Nessun lotto nel periodo','w');return;}
     const{jsPDF}=window.jspdf;
     const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
-    Report.pdfHeader(doc,'REGISTRO VENDITE / USCITE',r.from,r.to);
-    const rows=[];
-    let totDOP=0,totND=0,totAuto=0;
+    Report.pdfHeader(doc,'VENDITE PER GIORNO',r.from,r.to);
+    const allRows=[];
+    let totDOP=0,totND=0,totAlt=0;
     lots.forEach(([id])=>{
-      const slist=_db.sales[id]||[];
-      slist.forEach(s=>{
-        rows.push([
-          isoToLot(id),
-          fmtDate(s.date),
-          s.type==='dop'?'DOP':s.type==='nondop'?'Non DOP':'Autoconsumo',
-          s.qty,
-          (s.bollini||[]).join(', ')||'—',
-          s.method||'—',
-          s.ddtId||s.ndRef||s.scontrinoDate||'—',
-          s.note||''
-        ]);
+      (_db.sales[id]||[]).forEach(s=>{
+        const tipo=s.type==='dop'?'DOP':s.type==='nondop'?'Non DOP':
+          s.type==='autoconsumo'?'Autoconsumo':s.type==='assaggi'?'Assaggi':
+          s.type==='eliminazione'?'Eliminazione':s.type;
+        const rif=s.ddtId||s.ndRef||s.scontrinoDate||'—';
+        allRows.push({
+          date:s.date,
+          row:[fmtDate(s.date),isoToLot(id),tipo,s.qty,(s.bollini||[]).join(', ')||'—',s.method||'—',rif],
+          type:s.type,qty:Number(s.qty||0)
+        });
         if(s.type==='dop') totDOP+=Number(s.qty||0);
         else if(s.type==='nondop') totND+=Number(s.qty||0);
-        else totAuto+=Number(s.qty||0);
+        else totAlt+=Number(s.qty||0);
       });
     });
-    if(!rows.length){toast('Nessuna uscita nel periodo','w');return;}
-    rows.push(['TOTALE','','DOP:'+totDOP+' ND:'+totND+' Auto:'+totAuto,'','','','','']);
+    if(!allRows.length){toast('Nessuna uscita nel periodo','w');return;}
+    allRows.sort((a,b)=>b.date.localeCompare(a.date));
+    const rows=allRows.map(x=>x.row);
+    rows.push(['TOTALE','','','','','','']);
+    const pw=doc.internal.pageSize.getWidth();
     doc.autoTable({
       startY:38,
-      head:[['Lotto','Data','Tipo','Qty','Bollini','Metodo','Riferimento','Note']],
+      head:[['Data','Lotto','Tipo','Qty','Bollini','Metodo','Riferimento']],
       body:rows,
       styles:{fontSize:7,cellPadding:1.5},
       headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'},
+      columnStyles:{4:{cellWidth:50}},
       didParseCell(d){ if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,210,190];} }
     });
-    doc.save(`vendite-${r.from}-${r.to}.pdf`);
-    toast('PDF Vendite generato','s');
+    const finalY=doc.lastAutoTable.finalY+8;
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(60,60,60);
+    doc.text(
+      'Totali: DOP '+totDOP+' forme ('+(totDOP*0.28).toFixed(2)+' kg)  |  '+
+      'Non DOP '+totND+' forme ('+(totND*0.28).toFixed(2)+' kg)  |  '+
+      'Altro (auto/assaggi/elim.) '+totAlt+' forme',
+      14,finalY
+    );
+    doc.save('vendite-per-giorno-'+r.from+'-'+r.to+'.pdf');
+    toast('PDF Vendite per giorno generato','s');
   },
   pdfDisciplinare(){
     const r=Report.getRange();if(!r)return;
@@ -2333,7 +2455,7 @@ const Report = {
   },
   pdfFull(){
     const r=Report.getRange();if(!r)return;
-    Report.pdfProd();setTimeout(()=>Report.pdfSales(),500);
+    Report.pdfProd();setTimeout(()=>Report.pdfSalesLotti(),500);setTimeout(()=>Report.pdfSalesGiorno(),1000);
   },
   pdfHeader(doc,title,from,to){
     const pw=doc.internal.pageSize.getWidth();
@@ -2517,25 +2639,29 @@ const Drive = {
     }
   },
 
-  // Logica di sync all'avvio: confronta timestamp locale vs Drive e decide
+  // Sync all'avvio: mostra sempre il confronto e lascia scegliere all'utente
   async _syncOnStartup(){
     if(!Drive._token) return;
+    // Eseguito una sola volta per sessione
+    if(Drive._startupSyncDone) return;
+    Drive._startupSyncDone=true;
     Drive.updateUI('\u2601 Confronto dati...','syncing');
     const fileName='merlo-bianco-'+_mode+'.json';
     try{
-      // 1. Leggi metadati Drive
+      // Leggi metadati Drive
       const s=await fetch(
         'https://www.googleapis.com/drive/v3/files?q=name=\''+fileName+'\'&fields=files(id,modifiedTime)',
         {headers:{Authorization:'Bearer '+Drive._token}}
       );
       const sd=await s.json();
 
-      // 2. Se non esiste nessun file su Drive → carica il locale
+      // Nessun file su Drive → carica locale senza chiedere
       if(!sd.files||!sd.files.length){
         if(Object.keys(_db.production||{}).length>0){
           await Drive.saveToCloud();
+          Drive.updateUI('\u2705 Dati locali caricati su Drive (primo avvio)','ok');
         } else {
-          Drive.updateUI('\u2139 Nessun dato su Drive','');
+          Drive.updateUI('\u2139 Nessun dato su Drive né in locale','');
         }
         return;
       }
@@ -2545,45 +2671,78 @@ const Drive = {
       const localSaved=_db._localSavedAt||0;
       const localLots=Object.keys(_db.production||{}).length;
 
-      // 3. Nessun timestamp locale (dati vecchi prima dell'aggiornamento)
-      if(localSaved===0){
-        if(localLots===0){
-          // Locale vuoto → scarica da Drive senza chiedere
-          await Drive._downloadAndApply(fid,driveModified);
+      // Locale completamente vuoto e senza timestamp → scarica Drive senza chiedere
+      if(localSaved===0&&localLots===0){
+        const driveData=await Drive._fetchData(fid);
+        const driveLots=driveData?Object.keys(driveData.production||{}).length:0;
+        if(driveLots>0){
+          await Drive._applyData(driveData,driveModified);
         } else {
-          // Locale ha dati ma senza timestamp → chiedi
-          const ok=confirm(
-            'Drive ha dati del '+new Date(driveModified).toLocaleString('it-IT')+
-            '.\nQuesto dispositivo ha '+localLots+' lotti ma nessun timestamp.\n'+
-            'Caricare da Drive? (Annulla per mantenere i dati locali)'
-          );
-          if(ok) await Drive._downloadAndApply(fid,driveModified);
-          else await Drive.saveToCloud();
+          Drive.updateUI('\u2139 Nessun dato significativo','');
         }
         return;
       }
 
-      // 4. Confronto timestamp: margine di tolleranza 60 secondi
-      const diff=driveModified-localSaved;
-      if(diff>60000){
-        // Drive è più recente di 60 sec → scarica (con conferma se locale ha più lotti)
-        const driveData=await Drive._fetchData(fid);
-        const driveLots=driveData?Object.keys(driveData.production||{}).length:0;
-        if(localLots>driveLots&&localLots>0){
-          const ok=confirm(
-            'Drive ('+new Date(driveModified).toLocaleString('it-IT')+') ha '+driveLots+' lotti.\n'+
-            'Questo dispositivo ha '+localLots+' lotti ('+new Date(localSaved).toLocaleString('it-IT')+').\n'+
-            'Drive sembra più recente ma ha meno lotti. Caricare da Drive?'
-          );
-          if(!ok){ await Drive.saveToCloud(); return; }
-        }
-        if(driveData) await Drive._applyData(driveData,driveModified);
-      } else {
-        // Locale uguale o più recente → carica su Drive
-        await Drive.saveToCloud();
+      // In tutti gli altri casi: mostra il confronto e chiedi all'utente
+      const driveData=await Drive._fetchData(fid);
+      const driveLots=driveData?Object.keys(driveData.production||{}).length:0;
+      const driveSales=driveData?Object.values(driveData.sales||{}).flat().length:0;
+      const localSales=Object.values(_db.sales||{}).flat().length;
+      const lastLocalSale=Object.values(_db.sales||{}).flat()
+        .map(s=>s.date).filter(Boolean).sort().reverse()[0]||'—';
+      const lastDriveSale=driveData?Object.values(driveData.sales||{}).flat()
+        .map(s=>s.date).filter(Boolean).sort().reverse()[0]||'—':'—';
+
+      // Popola il modale
+      document.getElementById('sc-local-info').innerHTML=
+        '<b>Salvato:</b> '+(localSaved?new Date(localSaved).toLocaleString('it-IT'):'sconosciuto')+'<br>'+
+        '<b>Lotti:</b> '+localLots+'<br>'+
+        '<b>Uscite:</b> '+localSales+'<br>'+
+        '<b>Ultima vendita:</b> '+(lastLocalSale!=='—'?fmtDate(lastLocalSale):'—');
+      document.getElementById('sc-drive-info').innerHTML=
+        '<b>Salvato:</b> '+new Date(driveModified).toLocaleString('it-IT')+'<br>'+
+        '<b>Lotti:</b> '+driveLots+'<br>'+
+        '<b>Uscite:</b> '+driveSales+'<br>'+
+        '<b>Ultima vendita:</b> '+(lastDriveSale!=='—'?fmtDate(lastDriveSale):'—');
+
+      // Evidenzia quello più recente
+      const localCard=document.getElementById('sc-local');
+      const driveCard=document.getElementById('sc-drive');
+      if(localSaved>driveModified){
+        localCard.style.borderColor='var(--green)';
+        localCard.style.background='var(--green-xl)';
+      } else if(driveModified>localSaved){
+        driveCard.style.borderColor='var(--blue)';
+        driveCard.style.background='#EFF6FF';
       }
+
+      // Salva i dati Drive per quando l'utente sceglie
+      Drive._pendingDriveData=driveData;
+      Drive._pendingDriveTime=driveModified;
+      Drive.updateUI('\u2139 In attesa di scelta','');
+      openModal('m-sync-choice');
+
     }catch(e){
-      Drive.updateUI('\u26a0 Errore sync: '+e.message,'err');
+      Drive.updateUI('\u26a0 Errore confronto: '+e.message,'err');
+    }
+  },
+
+  // Utente sceglie: usa i dati locali → carica su Drive
+  async _chooseLocal(){
+    closeModal('m-sync-choice');
+    Drive._pendingDriveData=null;
+    await Drive.saveToCloud();
+    Drive.updateUI('\u2705 Dati locali caricati su Drive','ok');
+    toast('Dati locali usati e caricati su Drive','s');
+  },
+
+  // Utente sceglie: usa i dati Drive → applica in locale
+  async _chooseDrive(){
+    closeModal('m-sync-choice');
+    if(Drive._pendingDriveData){
+      await Drive._applyData(Drive._pendingDriveData,Drive._pendingDriveTime);
+      Drive._pendingDriveData=null;
+      toast('Dati Drive applicati','s');
     }
   },
 
@@ -2874,66 +3033,48 @@ const PWA = {
 
 /* ── CONFORMITA PAGE ── */
 const Conf={
-  curTab:'fisiche',
-  showTab(tab,btn){
-    Conf.curTab=tab;
-    ['fisiche','organolettiche','chimiche'].forEach(t=>{document.getElementById(`conf-tab-${t}`).style.display=t===tab?'block':'none';});
-    document.querySelectorAll('#sec-conformita .tab-btn').forEach(b=>b.classList.remove('on'));
-    btn.classList.add('on');Conf.renderTab(tab);
-  },
-  render(){Alerts.renderConf();Conf.renderTab(Conf.curTab);},
-  renderTab(tab){
-    const el=document.getElementById(`conf-tab-${tab}`);if(!el)return;
+  render(){
+    Alerts.renderConf();
+    const el=document.getElementById('conf-table-wrap');if(!el)return;
     const allLots=Object.entries(_db.production).sort((a,b)=>b[0].localeCompare(a[0]));
-    if(tab==='fisiche'){
-      if(!allLots.length){el.innerHTML='<div class="empty"><div class="ei">✅</div><p>Nessun lotto prodotto</p></div>';return;}
-      el.innerHTML=allLots.map(([id,l])=>{
-        const days=daysSince(id);const conf=l.physConf;
-        let cls='',statusHtml='';
-        if(conf){cls='ok';statusHtml=`<span class="bdg ${conf.result==='C'?'bdg-ok':'bdg-err'}">${conf.result==='C'?'✅ Conforme':'❌ Non Conforme'}</span> <span class="mini">${fmtDate(conf.date)}</span>`;}
-        else if(days<4){cls='';statusHtml=`<span class="bdg bdg-gray">In attesa (giorno ${days})</span>`;}
-        else if(days<=5){cls='warning';statusHtml=`<span class="bdg bdg-warn">⚠ Da inserire ora! (giorno ${days})</span>`;}
-        else{cls='urgent';statusHtml=`<span class="bdg bdg-err">❌ Scaduta (giorno ${days})</span>`;}
-        return`<div class="conf-lot-card ${cls}">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-            <div><b>Lotto ${isoToLot(id)}</b> <span class="mini">(giorno ${days} – ${l.forms} forme)</span></div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${statusHtml}
-              <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','fis')">${conf?'✏ Modifica':'+ Inserisci'}</button>
-            </div>
+    if(!allLots.length){el.innerHTML='<div class="empty"><div class="ei">✅</div><p>Nessun lotto prodotto</p></div>';return;}
+    const rows=allLots.map(([id,l])=>{
+      const days=daysSince(id);
+      // Fisiche
+      const ph=l.physConf;
+      let phHtml;
+      if(ph) phHtml=`<span class="bdg ${ph.result==='C'?'bdg-ok':'bdg-err'}">${ph.result==='C'?'✅ C':'❌ NC'}</span><br><span class="mini">${fmtDate(ph.date)}</span>`;
+      else if(days<4) phHtml=`<span class="bdg bdg-gray">Attesa (g.${days})</span>`;
+      else if(days<=5) phHtml=`<span class="bdg bdg-warn">⚠ Da inserire!</span>`;
+      else phHtml=`<span class="bdg bdg-err">❌ Scaduta</span>`;
+      // Organolettiche
+      const or=l.orgConf;
+      const hasAssaggi=(_db.sales[id]||[]).some(s=>s.type==='autoconsumo'||s.type==='assaggi');
+      let orHtml;
+      if(or) orHtml=`<span class="bdg ${or.result==='C'?'bdg-ok':'bdg-err'}">${or.result==='C'?'✅ C':'❌ NC'}</span><br><span class="mini">${fmtDate(or.date)}</span>`;
+      else if(!hasAssaggi) orHtml='<span class="bdg bdg-gray" style="font-size:.65rem">Richiede assaggi</span>';
+      else orHtml='<span class="bdg bdg-gray">Non inserita</span>';
+      // Chimiche
+      const ch=l.chemConf;
+      const chHtml=ch?`<span class="bdg ${ch.result==='C'?'bdg-ok':'bdg-err'}">${ch.result==='C'?'✅ C':'❌ NC'}</span><br><span class="mini">${fmtDate(ch.date)}</span>`:'<span class="bdg bdg-gray">—</span>';
+      return `<tr>
+        <td><b>${isoToLot(id)}</b><br><span class="mini">g.${days}</span></td>
+        <td>${phHtml}</td>
+        <td>${orHtml}</td>
+        <td>${chHtml}</td>
+        <td>
+          <div style="display:flex;gap:3px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','fis')">${ph?'✏':'+'} Fis</button>
+            <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','org')">${or?'✏':'+'} Org</button>
+            <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','chim')">${ch?'✏':'+'} Chim</button>
           </div>
-          ${conf&&conf.notes?`<div class="mini" style="margin-top:4px">Note: ${conf.notes}</div>`:''}
-        </div>`;
-      }).join('');
-    } else if(tab==='organolettiche'){
-      const eligible=allLots.filter(([id])=>(_db.sales[id]||[]).some(s=>s.type==='autoconsumo'||s.type==='assaggi'));
-      if(!eligible.length){el.innerHTML='<div class="alert alert-i">Le conformità organolettiche richiedono almeno una uscita autoconsumo/assaggi per quel lotto. Nessun lotto idoneo al momento.</div>';return;}
-      el.innerHTML=eligible.map(([id,l])=>{
-        const days=daysSince(id);const conf=l.orgConf;
-        const statusHtml=conf?`<span class="bdg ${conf.result==='C'?'bdg-ok':'bdg-err'}">${conf.result==='C'?'✅ Conforme':'❌ Non Conforme'}</span> <span class="mini">${fmtDate(conf.date)}</span>`:`<span class="bdg bdg-gray">Non inserita</span>`;
-        return`<div class="conf-lot-card ${conf?'ok':''}">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-            <div><b>Lotto ${isoToLot(id)}</b> <span class="mini">(giorno ${days})</span></div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${statusHtml}
-              <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','org')">${conf?'✏ Modifica':'+ Inserisci'}</button>
-            </div>
-          </div>
-        </div>`;
-      }).join('');
-    } else {
-      el.innerHTML=`<div class="alert alert-i">Analisi chimiche ~2×/anno in laboratorio. Se NC il lotto è bloccato per la vendita DOP.</div>`;
-      el.innerHTML+=allLots.map(([id,l])=>{
-        const conf=l.chemConf;const days=daysSince(id);
-        const statusHtml=conf?`<span class="bdg ${conf.result==='C'?'bdg-ok':'bdg-err'}">${conf.result==='C'?'✅ Conforme':'❌ Non Conforme'}</span> <span class="mini">${fmtDate(conf.date)}</span>`:`<span class="bdg bdg-gray">Non rilevata</span>`;
-        return`<div class="conf-lot-card ${conf&&conf.result==='NC'?'urgent':conf?'ok':''}">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-            <div><b>Lotto ${isoToLot(id)}</b> <span class="mini">(giorno ${days})</span></div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${statusHtml}
-              <button class="btn btn-ghost btn-xs" onclick="Prod.openConf('${id}','chim')">${conf?'✏ Modifica':'+ Inserisci'}</button>
-            </div>
-          </div>
-        </div>`;
-      }).join('');
-    }
+        </td>
+      </tr>`;
+    }).join('');
+    el.innerHTML=`<div class="tw"><table>
+      <thead><tr><th>Lotto</th><th>🏋 Fisiche</th><th>👅 Organolettiche</th><th>⚗ Chimiche</th><th>Azioni</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
   }
 };
 
@@ -3363,6 +3504,33 @@ const VD={
       }
       Store.saveNow();VD.renderList();Dash.render();toast('Vendita eliminata','w');
     });
+  }
+};
+
+/* ── NOTE ── */
+const Notes={
+  render(){
+    const el=document.getElementById('note-table-wrap');if(!el)return;
+    const lots=Object.entries(_db.production)
+      .filter(([,l])=>l.note&&l.note.trim())
+      .sort((a,b)=>b[0].localeCompare(a[0]));
+    if(!lots.length){
+      el.innerHTML='<div class="empty"><div class="ei">📝</div><p>Nessuna nota inserita. Aggiungi note durante la registrazione dei lotti.</p></div>';
+      return;
+    }
+    const rows=lots.map(([id,l])=>{
+      const days=daysSince(id);
+      const rem=Mag.remaining(id);
+      return `<tr>
+        <td style="white-space:nowrap"><b>${isoToLot(id)}</b><br><span class="mini">g.${days} — ${rem} forme rim.</span></td>
+        <td style="line-height:1.6">${l.note}</td>
+        <td><button class="btn btn-ghost btn-xs" onclick="Prod.openEdit('${id}')">✏</button></td>
+      </tr>`;
+    }).join('');
+    el.innerHTML=`<div class="tw"><table>
+      <thead><tr><th style="width:130px">Lotto</th><th>Note</th><th style="width:40px"></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
   }
 };
 
