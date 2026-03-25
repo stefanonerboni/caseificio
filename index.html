@@ -1313,7 +1313,7 @@ const Prod = {
     const typeNames={fis:'Fisiche',org:'Organolettiche',chim:'Chimiche'};
     // Check conditions for organoleptic
     if(type==='org'){
-      const hasSales=(_db.sales[id]||[]).some(s=>s.type==='autoconsumo');
+      const hasSales=(_db.sales[id]||[]).some(s=>s.type==='autoconsumo'||s.type==='assaggi');
       if(!hasSales){
         toast('Le conformità organolettiche si inseriscono solo se c\'è almeno un\'uscita come autoconsumo/assaggi','w');
         return;
