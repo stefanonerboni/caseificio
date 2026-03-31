@@ -614,6 +614,7 @@ select.fc option{font-family:var(--ff)}
     </div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('m-conf')">Annulla</button>
+      <button class="btn btn-d btn-sm" id="mc-delete-btn" onclick="Prod.deleteConf()" style="display:none">🗑 Elimina</button>
       <button class="btn btn-p" onclick="Prod.saveConf()">💾 Salva conformità</button>
     </div>
   </div>
@@ -1327,6 +1328,8 @@ const Prod = {
     document.getElementById('mc-date').value=existing?existing.date:today();
     document.getElementById('mc-result').value=existing?existing.result:'';
     document.getElementById('mc-note').value=existing?existing.notes:'';
+    const delBtn=document.getElementById('mc-delete-btn');
+    if(delBtn) delBtn.style.display=existing?'inline-flex':'none';
     let infoMsg='';
     if(type==='fis') infoMsg=`Lotto del ${isoToLot(id)} – Giorno ${days}. Le conformità fisiche vanno inserite tra il 4° e il 5° giorno.`;
     else if(type==='org') infoMsg=`Le conformità organolettiche sono facoltative. Inseribile solo se ci sono uscite autoconsumo/assaggi per questo lotto.`;
@@ -1349,6 +1352,22 @@ const Prod = {
     closeModal('m-conf');
     Prod.render();
     toast('Conformità salvata','s');
+  },
+  deleteConf(){
+    const id=document.getElementById('mc-lot-id').value;
+    const type=document.getElementById('mc-type').value;
+    const typeNames={fis:'fisiche',org:'organolettiche',chim:'chimiche'};
+    confirm2('Eliminare la conformità '+typeNames[type]+' per il lotto '+isoToLot(id)+'?',()=>{
+      const lot=_db.production[id];
+      if(!lot) return;
+      const confKey={fis:'physConf',org:'orgConf',chim:'chemConf'}[type];
+      delete lot[confKey];
+      Store.saveNow();
+      closeModal('m-conf');
+      Prod.render();
+      Conf.render();
+      toast('Conformità eliminata','w');
+    });
   }
 };
 
@@ -3115,7 +3134,10 @@ const Analisi={
         <td>${a.liters||'—'}</td><td>${a.fat||'—'}</td><td>${a.proteins||'—'}</td><td>${a.lactose||'—'}</td>
         <td>${a.caseins||'—'}</td><td>${a.caseinIndex||'—'}</td>
         <td>${a.somaticCells||'—'}</td><td>${a.bacterialLoad||'—'}</td>
-        <td><button class="btn btn-d btn-xs" onclick="Analisi.delete('${a.id}')">🗑</button></td>
+        <td style="display:flex;gap:3px">
+          <button class="btn btn-ghost btn-xs" onclick="Analisi.openEdit('${a.id}')">✏</button>
+          <button class="btn btn-d btn-xs" onclick="Analisi.delete('${a.id}')">🗑</button>
+        </td>
       </tr>`).join('')}</tbody>
     </table></div></div>`;
   },
@@ -3164,6 +3186,24 @@ const Analisi={
     document.getElementById('ma-type').value='daily';
     document.getElementById('ma-liters').value='';
     ['ma-fat','ma-prot','ma-lact','ma-cas','ma-ci','ma-sc','ma-bc','ma-note'].forEach(id=>document.getElementById(id).value='');
+    Analisi.onTypeChange();openModal('m-analisi');
+  },
+  openEdit(id){
+    const a=_db.milkAnalysis&&_db.milkAnalysis[id];
+    if(!a){toast('Analisi non trovata','e');return;}
+    document.getElementById('m-analisi-title').textContent='Modifica analisi latte';
+    document.getElementById('ma-edit-id').value=id;
+    document.getElementById('ma-date').value=a.date||'';
+    document.getElementById('ma-type').value=a.type||'daily';
+    document.getElementById('ma-liters').value=a.liters||'';
+    document.getElementById('ma-fat').value=a.fat||'';
+    document.getElementById('ma-prot').value=a.proteins||'';
+    document.getElementById('ma-lact').value=a.lactose||'';
+    document.getElementById('ma-cas').value=a.caseins||'';
+    document.getElementById('ma-ci').value=a.caseinIndex||'';
+    document.getElementById('ma-sc').value=a.somaticCells||'';
+    document.getElementById('ma-bc').value=a.bacterialLoad||'';
+    document.getElementById('ma-note').value=a.note||'';
     Analisi.onTypeChange();openModal('m-analisi');
   },
   onTypeChange(){
