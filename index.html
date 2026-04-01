@@ -457,7 +457,10 @@ select.fc option{font-family:var(--ff)}
           <div class="fg"><label class="fl">Da data</label><input type="date" class="fc" id="rep-from"></div>
           <div class="fg"><label class="fl">A data</label><input type="date" class="fc" id="rep-to"></div>
         </div>
-        <div class="pill-row" style="gap:7px;margin-top:8px">
+        <div class="frow" style="margin-top:8px;margin-bottom:4px">
+          <div class="fg" style="max-width:220px"><label class="fl" style="font-size:.75rem;color:var(--txt-3)">Aggiornato al (solo "per lotto")</label><input type="date" class="fc fc-sm" id="rep-asat"></div>
+        </div>
+        <div class="pill-row" style="gap:7px;margin-top:4px">
           <button class="btn btn-p btn-sm" onclick="Report.pdfProd()">📄 Produzione</button>
           <button class="btn btn-a btn-sm" onclick="Report.pdfSalesLotti()">📄 Vendite per lotto</button>
           <button class="btn btn-a btn-sm" onclick="Report.pdfSalesGiorno()">📄 Vendite per giorno</button>
@@ -2325,18 +2328,30 @@ const Report = {
     doc.save('produzione-'+r.from+'-'+r.to+'.pdf');
     toast('PDF Produzione generato','s');
   },
-  // Vendite per lotto: lotto → forme prodotte, uscite DOP/nonDOP/altro, rimanenza
+  // Vendite per lotto: lotti nel range, movimenti calcolati fino ad 'asat'
   pdfSalesLotti(){
     const r=Report.getRange();if(!r)return;
+    // 'Aggiornato al': se non impostato usa r.to
+    const asat=document.getElementById('rep-asat').value||r.to;
     const lots=Report.getLots(r.from,r.to);
-    if(!lots.length){toast('Nessun lotto nel periodo','w');return;}
+    if(!lots.length){toast('Nessun lotto prodotto nel periodo','w');return;}
     const{jsPDF}=window.jspdf;
     const doc=new jsPDF({unit:'mm',format:'a4'});
-    Report.pdfHeader(doc,'VENDITE PER LOTTO',r.from,r.to);
+    // Header con info periodo lotti + data aggiornamento
+    const pw=doc.internal.pageSize.getWidth();
+    doc.setDrawColor(45,80,22);doc.setLineWidth(0.8);doc.line(14,14,pw-14,14);
+    doc.setTextColor(45,80,22);doc.setFontSize(11);doc.setFont('helvetica','bold');
+    doc.text('Registro Caseificio – Merlo Bianco',14,10);
+    doc.setFontSize(10);doc.text('VENDITE PER LOTTO',14,19);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+    doc.text('Lotti: '+fmtDate(r.from)+' - '+fmtDate(r.to),pw-14,10,{align:'right'});
+    doc.text('Aggiornato al: '+fmtDate(asat)+'   Generato il '+fmtDate(today()),pw-14,19,{align:'right'});
+    doc.setTextColor(0,0,0);
     const rows=[];
     let totF=0,totDOP=0,totND=0,totAlt=0,totRim=0;
     lots.forEach(([id,l])=>{
-      const slist=_db.sales[id]||[];
+      // Solo movimenti avvenuti fino ad 'asat'
+      const slist=(_db.sales[id]||[]).filter(s=>s.date<=asat);
       const forme=Number(l.forms||0);
       const dop=slist.filter(s=>s.type==='dop').reduce((s,x)=>s+Number(x.qty||0),0);
       const nd=slist.filter(s=>s.type==='nondop').reduce((s,x)=>s+Number(x.qty||0),0);
@@ -2346,40 +2361,38 @@ const Report = {
       totF+=forme;totDOP+=dop;totND+=nd;totAlt+=alt;totRim+=rim;
     });
     rows.push(['TOTALE',totF,totDOP,totND,totAlt,totRim]);
-    const pw=doc.internal.pageSize.getWidth();
     doc.autoTable({
-      startY:38,
+      startY:28,
       head:[['Lotto','Forme prod.','Uscite DOP','Uscite Non DOP','Uscite Altro','Rimanenza']],
       body:rows,
       styles:{fontSize:8,cellPadding:2},
       headStyles:{fillColor:[60,60,60],textColor:255,fontStyle:'bold'},
       didParseCell(d){ if(d.row.index===rows.length-1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=[200,210,190];} }
     });
-    // Riga totali dettagliata sotto la tabella
     const finalY=doc.lastAutoTable.finalY+8;
     doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(60,60,60);
     doc.text(
-      'Totali: DOP '+totDOP+' forme ('+( totDOP*0.28).toFixed(2)+' kg)  |  '+
+      'Totali: DOP '+totDOP+' forme ('+(totDOP*0.28).toFixed(2)+' kg)  |  '+
       'Non DOP '+totND+' forme ('+(totND*0.28).toFixed(2)+' kg)  |  '+
       'Altro '+totAlt+' forme  |  Rimanenze '+totRim+' forme',
       14,finalY
     );
-    doc.save('vendite-per-lotto-'+r.from+'-'+r.to+'.pdf');
+    const asatLabel=asat===r.to?'':'aggiornato al '+fmtDate(asat)+'-';
+    doc.save('vendite-per-lotto-'+r.from+'-'+asatLabel+r.to+'.pdf');
     toast('PDF Vendite per lotto generato','s');
   },
 
-  // Vendite per giorno: tabella cronologica di tutte le uscite
+  // Vendite per giorno: tutte le uscite avvenute nel range, qualsiasi lotto
   pdfSalesGiorno(){
     const r=Report.getRange();if(!r)return;
-    const lots=Report.getLots(r.from,r.to);
-    if(!lots.length){toast('Nessun lotto nel periodo','w');return;}
     const{jsPDF}=window.jspdf;
     const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
     Report.pdfHeader(doc,'VENDITE PER GIORNO',r.from,r.to);
     const allRows=[];
     let totDOP=0,totND=0,totAlt=0;
-    lots.forEach(([id])=>{
-      (_db.sales[id]||[]).forEach(s=>{
+    // Scorre TUTTE le uscite di TUTTI i lotti, filtra per data uscita
+    Object.entries(_db.sales||{}).forEach(([id,slist])=>{
+      (slist||[]).filter(s=>s.date>=r.from&&s.date<=r.to).forEach(s=>{
         const tipo=s.type==='dop'?'DOP':s.type==='nondop'?'Non DOP':
           s.type==='autoconsumo'?'Autoconsumo':s.type==='assaggi'?'Assaggi':
           s.type==='eliminazione'?'Eliminazione':s.type;
@@ -2394,7 +2407,7 @@ const Report = {
         else totAlt+=Number(s.qty||0);
       });
     });
-    if(!allRows.length){toast('Nessuna uscita nel periodo','w');return;}
+    if(!allRows.length){toast('Nessuna uscita nel periodo selezionato','w');return;}
     allRows.sort((a,b)=>b.date.localeCompare(a.date));
     const rows=allRows.map(x=>x.row);
     rows.push(['TOTALE','','','','','','']);
